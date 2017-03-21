@@ -1,0 +1,2 @@
+(DEFUN I(X) (CONS (CAR L) X))
+(DEFUN POW(L) (IF (NULL L) '(NIL) (LET ((PS (POW (CDR L)))) (APPEND PS (MAP I PS)))))
