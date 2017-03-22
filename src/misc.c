@@ -18,7 +18,6 @@ card(objectp p)
 	return i;
 }
 
-
 objectp
 sst(objectp b, objectp v, objectp body)
 {

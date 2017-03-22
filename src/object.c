@@ -12,6 +12,7 @@
 #include "sisp.h"
 #include "extern.h"
 #include "misc.h"
+
 #define HANDSIG(ARG,EXP)			\
 	do { if (ARG==NULL)	{			\
 		printf(";; " #EXP "."); 	\
@@ -34,20 +35,20 @@ obj_type(objectp p)
 	char *s;
 	switch (p->type) {
 		case OBJ_NIL:
-			return "NIL\n";
+			return "NIL";
 		case OBJ_T: 
-			return "T\n";
+			return "T";
 		case OBJ_IDENTIFIER: 
 			s = (char *)xmalloc(16*sizeof(char));
 			strncpy(s,p->value.id,16);
 			s[strlen(s)-1] = '\0';
 			return s; 
 		case OBJ_CONS: 
-			return "\t(CONS)\n";
+			return "CONS";
 		case OBJ_NULL:
-			return "NULL\n";
+			return "NULL";
 		default: 
-			return "FREED\n";
+			return "FREED";
 	}
 }
 
@@ -61,7 +62,6 @@ print_list(void)
 		princ_object(stdout, p);
 		printf("\n");
 	}
-	
 }
 
 __inline__ objectp 
@@ -70,8 +70,8 @@ new_object(a_type type)
 	objectp p;
 	
 	if (free_objs_list == NULL) 
-		p = (objectp)xmalloc(sizeof(struct object));
-	 else { 
+		p = (objectp) xmalloc(sizeof(struct object));
+	else { 
 		p = free_objs_list;
 		free_objs_list = free_objs_list->next;
 		--free_objs;
@@ -96,7 +96,7 @@ search_object_integer(long long int i)
 	for (p = used_objs_list; p != NULL; p = p->next)
 		if (p->type == OBJ_INTEGER && p->value.d == i)
 			return p;
-	return NULL;
+	return (objectp) NULL;
 }
 
 __inline__  objectp 
@@ -106,7 +106,7 @@ search_object_identifier(char *s)
 	for (p = used_objs_list; p != NULL; p = p->next)
 		if (p->type == OBJ_IDENTIFIER && !strcmp(p->value.id, s))
 			return p;
-	return NULL;
+	return (objectp) NULL;
 }
 
 void 
@@ -123,7 +123,6 @@ set_object(objectp name, objectp value)
 	object_pairp p;
 	HANDSIG(value, SET OBJECT);
 	if (name->type != OBJ_IDENTIFIER)
-	//	HANDSIG(NULL, SET OBJECT);
 		return;
 	for (p = setobjs_list; p != NULL; p = p->next)
 		if (p->name->value.id != NULL && 
@@ -174,14 +173,13 @@ dump_objects(void)
 	object_pairp p;
 	objectp q;
 	printf("st: %d\tft: %d\n",used_objs, free_objs);
-	
 	printf("objetos guardados: \n");
 	for (p = setobjs_list; p != NULL; p = p->next) {
-		printf("%s: ", p->name->value.id);
+		printf("%p::%s:: ", p, p->name->value.id);
 		princ_object(stdout, p->value);
 		printf("\n");
 	}
-	
+	return;
 	printf("valores guardados: \n");
 	for (q = used_objs_list; q != NULL; q = q->next) {
 		princ_object(stdout, q);

@@ -56,7 +56,7 @@ objectp parse_form(void)
 }
 		 
 objectp parse_object(int havetoken)
-{
+	{
 	objectp p = NULL;
 	if (!havetoken) {
 		if (!setjmp(jl))

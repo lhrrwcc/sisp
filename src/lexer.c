@@ -46,7 +46,7 @@ static char*
 extend_buf(char *p)
 {
 	int off = p - token_buffer;
-	token_buffer_max += 64;
+	token_buffer_max += 128;
 	token_buffer = (char *)xrealloc(token_buffer, token_buffer_max);
 	return token_buffer + off;
 }

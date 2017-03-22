@@ -56,6 +56,7 @@ objectp bq(objectp args)
 	} while ((args = cdr(args)) != nil);	
 	return first;
 }
+
 static objectp 
 F_less(objectp args)
 {
@@ -413,7 +414,7 @@ F_eqab(objectp a, objectp b)
 	    	break;
     }
     ASSERTP(1, EQ A B);
-	return NULL;
+	return (objectp) NULL;
 }
 
 objectp
@@ -436,7 +437,7 @@ F_eq(objectp args)
 			return t;
 	}
 	ASSERTP(1, EQ);
-	return NULL;
+	return (objectp) NULL;
 }
 
 objectp
@@ -651,7 +652,7 @@ F_subst(objectp args)
 		return sst(sym, val, body);
 	}
 	ASSERTP(1,SUBST);
-	return NULL;
+	return (objectp) NULL;
 }
 
 objectp 
