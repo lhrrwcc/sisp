@@ -64,7 +64,6 @@ eqcons(objectp a, objectp b)
 	return c->type == OBJ_T ? eqcons(cdr(a), cdr(b)) : nil;
 }
 
-
 void 
 princ_object(FILE *fout, objectp p)
 {
@@ -84,7 +83,7 @@ princ_object(FILE *fout, objectp p)
 	case OBJ_NULL:
 		break;
 	case OBJ_INTEGER:
-		fprintf(fout, "%lli", p->value.d);
+		fprintf(fout, "%d", p->value.d);
 		break;
 	case OBJ_CONS:
 		fputc('(', fout);

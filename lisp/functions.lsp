@@ -1,3 +1,4 @@
+(defun equal (x y) (= x y))
 (defun first (x) (car x))
 (defun rest (x) (cdr x))
 (defun second (x) (car (cdr x)))
@@ -39,9 +40,9 @@
 (defun cddddr (x) (cdr (cdr (cdr (cdr x)))))
 
 (defun nth (n l)
-  (cond ((atom l) l)
+  (cond ((atomp l) l)
 	((eq n 0) (car l))
-	(T (nth (- n 1) (cdr l)))))
+	(T (nth (+ n -1) (cdr l)))))
 
 (defun cond* (x)
   (cond ((set 'cond-r (eval (caar x)))
@@ -55,16 +56,9 @@
 	  (T (eval (car x)))))
 
 (defun subst (new old l)
-  (cond ((atom l) (cond ((eq l old) new) (T l)))
+  (cond ((atompp l) (cond ((eq l old) new) (T l)))
 	(T (cons (subst new old (car l))
 		 (subst new old (cdr l))))))
-
-(defun equal (x y)
-  (or (and (atom x) (atom y) (eq x y))
-      (and (not (atom x))
-	   (not (atom y))
-	   (equal (car x) (car y))
-	   (equal (cdr x) (cdr y)))))
 
 (defun append (x y)
   (cond ((null x) y)
@@ -76,7 +70,7 @@
 
 (defun pair (x y)
   (cond ((and (null x) (null y)) NIL)
-	((and (not (atom x)) (not (atom y)))
+	((and (not (atomp x)) (not (atomp y)))
 	 (cons (list (car x) (car y))
 	       (pair (cdr x) (cdr y))))))
 
@@ -86,7 +80,7 @@
 	(T (assoc x (cdr y)))))
 
 (defun sublis (x y)
-  (cond ((atom y) (_sublis x y))
+  (cond ((atomp y) (_sublis x y))
 	(T (cons (sublis x (car y)) (sublis x (cdr y))))))
 (defun _sublis (x z)
   (cond ((null x) z)
@@ -94,7 +88,7 @@
 	(T (_sublis (cdr x) z))))
 
 (defun last (e)
-  (cond ((atom e) NIL)
+  (cond ((atomp e) NIL)
 	((null (cdr e)) (car e))
 	(T (last (cdr e)))))
 
@@ -120,14 +114,14 @@
 	(T (pred x (cdr y)))))
 
 (defun before (x y)
-  (cond ((atom x) NIL)
+  (cond ((atomp x) NIL)
 	((null (cdr x)) NIL)
 	((equal (car x) y) NIL)
 	((equal (cadr x) y) (cons (car x) NIL))
 	(T (cons (car x) (before (cdr x) y)))))
 
 (defun after (x y)
-  (cond ((atom x) NIL)
+  (cond ((atomp x) NIL)
 	((equal (car x) y) (cdr x))
 	(T (after (cdr x) y))))
 

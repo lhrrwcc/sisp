@@ -4,7 +4,7 @@
 typedef enum	{false, true} bool;
 	
 typedef enum 	{OBJ_NULL, OBJ_NIL, OBJ_T, OBJ_IDENTIFIER,
-				OBJ_CONS,OBJ_INTEGER} a_type;
+				OBJ_CONS, OBJ_INTEGER} a_type;
 typedef struct 	object *objectp;
 
 struct object {
@@ -12,7 +12,7 @@ struct object {
   unsigned int gc; /* unsigned? */
   union {
     char *id;
-    long long int d;
+    int d;
     struct {
       objectp car;
       objectp cdr;

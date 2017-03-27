@@ -31,7 +31,7 @@ jmp_buf 	jl;
 void
 init_lex(void)
 {
-	token_buffer_max = 64;
+	token_buffer_max = 32;
 	token_buffer = (char *)xmalloc(token_buffer_max);
 	lex_bufp = lex_buf;
 }
@@ -46,8 +46,10 @@ static char*
 extend_buf(char *p)
 {
 	int off = p - token_buffer;
-	token_buffer_max += 128;
+	printf("extiendo\n");
+	token_buffer_max += 64;
 	token_buffer = (char *)xrealloc(token_buffer, token_buffer_max);
+
 	return token_buffer + off;
 }
 

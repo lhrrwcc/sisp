@@ -27,7 +27,7 @@
 #define GET(p) 	((!setjmp(je)) ? eval(p) : NULL)
 #define TRY 	((!setjmp(jb)) ? parse_object(0) : NULL)
 
-jmp_buf jb, je;
+jmp_buf jb, je, jo;
 
 static void 
 pf(void)
@@ -37,11 +37,8 @@ pf(void)
 	init_lex();
 	while(1) {
 		p = TRY;
-	    if(p != NULL) { 
+	    if(p != NULL) 
 			q = GET(p);
-//			princ_object(stdout,p);
-//			printf("\n");
-		}
 		else
 			break;
 	    remove_from_v();
@@ -60,10 +57,12 @@ process_input(void)
 		printf(": ");
 		fflush(stdout);
 		p = TRY;
-		if (p != NULL) 
-		    q = GET(p);
+		if (p != NULL)
+			q = GET(p);
 		else
 			printf(";; PARSER ERROR.\n");
+		if(q == NULL)
+			printf("problemo\n");
 		if (p != NULL && q != NULL)
 		    princ_object(stdout,q);
 		puts("");

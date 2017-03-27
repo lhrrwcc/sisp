@@ -84,7 +84,7 @@ eval_func_lazy(objectp p, objectp args)
 	return q;
 }
 
-__inline__ static objectp 
+static objectp 
 eval_func(objectp p, objectp args)
 {
 	objectp a, b;
@@ -121,6 +121,8 @@ eval_func(objectp p, objectp args)
 		set_object(car(bind_list), cadr(car(a)));
 		a = cdr(a);
 	} while ((bind_list = cdr(bind_list)) != nil);
+
+	//return nil;
 	return q;
 }
 

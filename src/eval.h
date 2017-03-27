@@ -25,10 +25,10 @@
 	(p->type) == OBJ_CONS ? eval_cons(p) : (p))
 #define car(p) (									\
 		(p->type) == OBJ_CONS ? p->value.c.car :	\
-		(p->type) == OBJ_NIL  ? nil	: handsig("CAR",p))
+		(p->type) == OBJ_NIL  ? nil	: null)
 #define cdr(p) (									\
 		(p->type) == OBJ_CONS ? p->value.c.cdr :	\
-		(p->type) == OBJ_NIL  ? nil : handsig("CDR",p))
+		(p->type) == OBJ_NIL  ? nil : null)
 #define cddr(p) cdr(cdr(p))
 #define cadr(p) car(cdr(p))
 #define caar(p)	car(car(p))

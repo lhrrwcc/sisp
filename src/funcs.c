@@ -22,7 +22,7 @@
 		p->type == OBJ_CONS && 		\
 		cdr(p)->type != OBJ_CONS && \
 		cdr(p) != nil )
-
+#define arg car(args)
 
 bool lazy_eval = false;
 
@@ -33,7 +33,7 @@ objectp bq(objectp args)
 	objectp p1, r, first, prev;
 	first = prev = NULL;
 	do { 
-		p1 = car(args);
+		p1 = arg;
 		r = new_object(OBJ_CONS);
 		if (p1->type == OBJ_CONS)
 			r->vcar = bq(p1);
@@ -102,9 +102,9 @@ F_greateq(objectp args)
 static objectp
 F_add(objectp args)
 {
-    long long int i;
+    int i;
     objectp p;
-    i = 0LL;
+    i = 0;
 	do {
 		p = eval(car(args)); 
 		ASSERTP(p->type != OBJ_INTEGER, ADD);	
@@ -118,7 +118,7 @@ F_add(objectp args)
 static objectp
 F_prod(objectp args)
 {
-    long long int i;
+    int i;
     objectp p;
     i = 1;
     do {
@@ -155,7 +155,7 @@ F_cond(objectp args)
 {
 	objectp p2;
 	do {
-		p2 = eval(caar(args));
+		p2 = eval(car(car(args)));
 		ASSERTP(p2 == NULL, COND);
 		if (p2 != nil) {
 			if (cdar(args) != nil)
@@ -180,7 +180,7 @@ objectp
 F_ord(objectp args)
 {
 	objectp q, p;
-	register long long i;
+	register int i;
 	p = eval(car(args));
 	i = 0;
 	q = new_object(OBJ_INTEGER);	
@@ -208,7 +208,7 @@ __inline__ static
 __inline__ static
 objectp F_cdr(objectp args)
 {
-	return cdr(eval(car(args)));
+	return cdr(eval(arg));
 }
 
 objectp 
@@ -363,9 +363,10 @@ F_progn(objectp args)
 	do {
 		if (cdr(args) == nil)
 			break;
-		eval(car(args));
+			eval(car(args));
 	} while ((args = cdr(args)) != nil);
-	return eval(car(args));
+	
+	return try_eval(car(args));
 }
 
 objectp 

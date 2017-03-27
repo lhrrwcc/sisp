@@ -90,7 +90,7 @@ new_object(a_type type)
 }
 
 __inline__  objectp 
-search_object_integer(long long int i)
+search_object_integer(int i)
 {
 	objectp p;
 	for (p = used_objs_list; p != NULL; p = p->next)
@@ -190,23 +190,6 @@ dump_objects(void)
 	
 }
 
-void
-dump_stack(void)
-{
-	object_pairp p;
-	objectp q;
-	p = setobjs_list;
-	while (strcmp(p->name->value.id, "___END___")) {
-		q = p->value;
-		if (q->type == OBJ_CONS) { 
-			printf("(DEFUN %s ", p->name->value.id);
-			princ_object(stdout, q);
-			printf(")\n");
-		}
-		p = p->next;
-	}
-}
-
 __inline__ static void
 tag_tree(objectp p)
 {
@@ -250,9 +233,8 @@ garbage_collect(void)
 	for (p = used_objs_list; p != NULL && p != t; p = next) {
 		next = p->next;
 		if (p->gc != gc_id && p != null) {
-			if (p->type == OBJ_IDENTIFIER) 
+			if (p->type == OBJ_IDENTIFIER)
 				free(p->value.id);
-			
 			p->next = free_objs_list;
 			free_objs_list = p;
 			++free_objs;

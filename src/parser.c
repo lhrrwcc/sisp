@@ -55,8 +55,9 @@ objectp parse_form(void)
 	return (first == NULL) ? nil : first;
 }
 		 
-objectp parse_object(int havetoken)
-	{
+objectp 
+parse_object(int havetoken)
+{
 	objectp p = NULL;
 	if (!havetoken) {
 		if (!setjmp(jl))
@@ -93,10 +94,9 @@ objectp parse_object(int havetoken)
 				}
 			break;
 		case INTEGER:
-			if ((p = search_object_integer(strtoll(token_buffer, 
-								NULL, 10))) == NULL) {
+			if ((p = search_object_integer(atoi(token_buffer))) == NULL) {
 				p = new_object(OBJ_INTEGER);
-				p->value.d = strtoll(token_buffer,NULL,10);
+				p->value.d = atoi(token_buffer);
 			}
 			break;
 		default:
