@@ -34,6 +34,7 @@ __inline__ static
 objectp parse_form(void)
 {
 	objectp p, first = NULL, prev = NULL;
+
 	while ((thistoken = gettoken()) != ')' && thistoken != EOF) {
 		if (thistoken == '.') {
 			thistoken = gettoken();
@@ -87,6 +88,8 @@ parse_object(int havetoken)
 				p = t;
 			else if (!strcmp(token_buffer, "NIL"))
 				p = nil;
+			else if (!strcmp(token_buffer, "NULL"))
+				p = null;
 			else 
 				if ((p = search_object_identifier(token_buffer)) == NULL) {
 					p = new_object(OBJ_IDENTIFIER);
@@ -96,7 +99,13 @@ parse_object(int havetoken)
 		case INTEGER:
 			if ((p = search_object_integer(atoi(token_buffer))) == NULL) {
 				p = new_object(OBJ_INTEGER);
-				p->value.d = atoi(token_buffer);
+				p->value.i = atoi(token_buffer);
+			}
+			break;
+		case DOUBLE:
+			if ((p = search_object_double(strtod(token_buffer, NULL))) == NULL) {
+				p = new_object(OBJ_DOUBLE);
+				p->value.d = strtod(token_buffer, NULL);
 			}
 			break;
 		default:

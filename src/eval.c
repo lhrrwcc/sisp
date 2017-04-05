@@ -9,6 +9,14 @@
 #include "extern.h"
 #include "misc.h"
 
+objectp 
+handsig(char *str,objectp p)
+{
+	printf("; %s.", str);
+	longjmp(je, 1);
+	return null;
+}
+
 static int 
 compar(const void *p1, const void *p2)
 {
@@ -26,8 +34,9 @@ ss(objectp p, objectp body)
 			if (!strcmp(p1->value.id, p->value.id))
 				return 1;
 			p2 = try_object(p1);
-			if (p2->type == OBJ_CONS && ss(p,p2) == 1)
-				return 1;
+			if (p2->type == OBJ_CONS) 
+				if(ss(p,p2) == 1)
+					return 1;
 			break;
 		case OBJ_CONS:
 			if (ss(p,p1))
@@ -40,7 +49,19 @@ ss(objectp p, objectp body)
 				return 1;
 			break;
 		case OBJ_INTEGER:
-			if (p1->value.d == p->value.d) 
+			if (p1->value.i == p->value.i)
+				return 1;
+			p2 = try_object(p1);
+			if (p2->type == OBJ_CONS)
+			 if(ss(p,p2) == 1)
+				return 1;
+			break;
+		case OBJ_DOUBLE:
+			if (p1->value.d == p->value.d)
+				return 1;
+			p2 = try_object(p1);
+			if (p2->type == OBJ_CONS)
+			 if(ss(p,p2) == 1)
 				return 1;
 			break;
 		}
@@ -112,7 +133,7 @@ eval_func(objectp p, objectp args)
 		set_object(car(bind_list), caar(a));
 		a = cdr(a);
 	} while ((bind_list = cdr(bind_list)) != nil);
-	q = NULL;
+	q = null;
 	if (!setjmp(je))
 		q = F_progn(cddr(p));
 	bind_list = cadr(p);
@@ -121,26 +142,14 @@ eval_func(objectp p, objectp args)
 		set_object(car(bind_list), cadr(car(a)));
 		a = cdr(a);
 	} while ((bind_list = cdr(bind_list)) != nil);
-
-	//return nil;
 	return q;
-}
-
-objectp 
-handsig(char *str,objectp p)
-{
-	printf(";; EVAL: (%s ", str);
-	princ_object(stdout, p); 
-	printf(").");
-	longjmp(je, 1);
-	return NULL;
 }
 
 objectp 
 eval_cons(objectp p)
 {
-	objectp p3;
-	unsigned int cargs = 0;
+	objectp func_name;
+	unsigned int n_args = 0;
 	if (car(p)->type == OBJ_IDENTIFIER) {
 		funcs key, *item;
 		if (!strcmp(car(p)->value.id, "LAMBDA")) 
@@ -150,13 +159,16 @@ eval_cons(objectp p)
 						sizeof(functions)/sizeof(functions[0]), 
 						sizeof(functions[0]), compar)) != NULL) 
 			return item->func(cdr(p));
-		p3 = get_object(car(p));
-		if (card(cdr(p)) != (cargs=card(cadr(p3)))) {
-			printf(";; %s: EXPECTED %d ARGUMENTS.", car(p)->value.id, cargs);
-			longjmp(je,1 );
+		func_name = get_object(car(p));
+		if(func_name == null || func_name == NULL)
+			longjmp(je,1);
+		if (card(cdr(p)) != (n_args=card(cadr(func_name)))) {
+			printf(";; %s: EXPECTED %d ARGUMENTS.", car(p)->value.id, n_args);
+			longjmp(je,1);
 		}
-		return lazy_eval==true ? eval_func_lazy(p3, cdr(p)) : eval_func(p3, cdr(p));
+		return lazy_eval==true ? eval_func_lazy(func_name, cdr(p)) : 
+								 eval_func(func_name, cdr(p));
 	}
 	handsig("NOT A FUNCTION", car(p));
-	return NULL;
+	return null;
 }

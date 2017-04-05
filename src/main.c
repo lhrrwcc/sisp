@@ -61,11 +61,10 @@ process_input(void)
 			q = GET(p);
 		else
 			printf(";; PARSER ERROR.\n");
-		if(q == NULL)
-			printf("problemo\n");
-		if (p != NULL && q != NULL)
+		if (p != NULL && q != NULL && q->type != 0)
 		    princ_object(stdout,q);
 		puts("");
+
 		remove_from_v();
 		garbage_collect();
 	}
@@ -91,7 +90,7 @@ main(int argc, char **argv)
 {
 	int fd;
 	char buildf[] = "/tmp/sisp.XXXXXXXX";
-	struct rlimit l;
+//	struct rlimit l;
 	init_objects();
 /* VER SI ES CONVENIENTE USAR ESTO
  *	

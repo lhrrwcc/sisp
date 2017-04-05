@@ -29,47 +29,12 @@ static unsigned int gc_id = 0;
 static int 			free_objs = 0;
 static int 			used_objs = 0;
 
-static char *
-obj_type(objectp p)
-{
-	char *s;
-	switch (p->type) {
-		case OBJ_NIL:
-			return "NIL";
-		case OBJ_T: 
-			return "T";
-		case OBJ_IDENTIFIER: 
-			s = (char *)xmalloc(16*sizeof(char));
-			strncpy(s,p->value.id,16);
-			s[strlen(s)-1] = '\0';
-			return s; 
-		case OBJ_CONS: 
-			return "CONS";
-		case OBJ_NULL:
-			return "NULL";
-		default: 
-			return "FREED";
-	}
-}
-
-void 
-print_list(void)
-{
-	objectp p;
-	printf(":: used objects\n");
-	for (p = used_objs_list; p != NULL; p = p->next) 
-	{
-		princ_object(stdout, p);
-		printf("\n");
-	}
-}
-
 __inline__ objectp 
 new_object(a_type type)
 {
 	objectp p;
-	
-	if (free_objs_list == NULL) 
+
+	if (free_objs_list == NULL)
 		p = (objectp) xmalloc(sizeof(struct object));
 	else { 
 		p = free_objs_list;
@@ -90,11 +55,21 @@ new_object(a_type type)
 }
 
 __inline__  objectp 
+search_object_double(double d)
+{
+	objectp p;
+	for (p = used_objs_list; p != NULL; p = p->next)
+		if (p->type == OBJ_INTEGER && p->value.d == d)
+			return p;
+	return (objectp) NULL;
+}
+
+__inline__  objectp 
 search_object_integer(int i)
 {
 	objectp p;
 	for (p = used_objs_list; p != NULL; p = p->next)
-		if (p->type == OBJ_INTEGER && p->value.d == i)
+		if (p->type == OBJ_INTEGER && p->value.i == i)
 			return p;
 	return (objectp) NULL;
 }
@@ -116,6 +91,8 @@ init_objects(void)
 	t		= new_object(OBJ_T);
 	null	= new_object(OBJ_NULL);
 }
+/* (SETQ ID VALUE)
+	id = */
 
 void
 set_object(objectp name, objectp value)
@@ -125,8 +102,7 @@ set_object(objectp name, objectp value)
 	if (name->type != OBJ_IDENTIFIER)
 		return;
 	for (p = setobjs_list; p != NULL; p = p->next)
-		if (p->name->value.id != NULL && 
-			!strcmp(name->value.id, p->name->value.id)) {
+		if (p->name->value.id != NULL && !strcmp(name->value.id, p->name->value.id)) {
 			p->value = value;
 			return;
 		}
@@ -164,7 +140,7 @@ get_object(objectp name)
 			!strcmp(name->value.id, p->name->value.id))
 			return p->value;
 	HANDSIG(NULL, OBJECT NOT FOUND);
-	return NULL;
+	return null;
 }
 
 void 
@@ -176,6 +152,9 @@ dump_objects(void)
 	printf("objetos guardados: \n");
 	for (p = setobjs_list; p != NULL; p = p->next) {
 		printf("%p::%s:: ", p, p->name->value.id);
+		if(p->value->type == OBJ_NULL) {
+			printf("%s is NULL", p->name->value.id);
+		}
 		princ_object(stdout, p->value);
 		printf("\n");
 	}
@@ -184,10 +163,8 @@ dump_objects(void)
 	for (q = used_objs_list; q != NULL; q = q->next) {
 		princ_object(stdout, q);
 		printf("\n");
-	}
-	getchar();
-	
-	
+	}	
+
 }
 
 __inline__ static void
@@ -216,11 +193,9 @@ void
 remove_from_v(void)
 {
 	object_pairp q;
-	for (q = setobjs_list; q != NULL; q = q->next) 
-		if (q->value == null) { 
-			q->value = NULL;
-			setobjs_list = q->next;
-		}
+	for (q = setobjs_list; q != NULL; q = q->next)
+		if (q->value->type == OBJ_NULL)
+			setobjs_list = setobjs_list->next;
 }
 
 __inline__ void 

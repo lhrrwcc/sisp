@@ -31,8 +31,13 @@ sst(objectp b, objectp v, objectp body)
 			q->vcar = v;
 		else if (p->type == OBJ_CONS)
 			q->vcar = sst(b,v,p);
-		else if (p->type == OBJ_INTEGER && p->value.d == b->value.d)
+		else if (p->type == OBJ_INTEGER && b->type == OBJ_INTEGER &&
+				 p->value.i == b->value.i)
 			    q->vcar = v;
+		else if (p->type == OBJ_DOUBLE && b->type == OBJ_DOUBLE &&
+				 p->value.d == b->value.d)
+			    q->vcar = v;
+
 		else
 			q->vcar = p;
 		if (first == NULL)
@@ -83,7 +88,10 @@ princ_object(FILE *fout, objectp p)
 	case OBJ_NULL:
 		break;
 	case OBJ_INTEGER:
-		fprintf(fout, "%d", p->value.d);
+		printf("%i", p->value.i);
+		break;
+	case OBJ_DOUBLE:
+		printf("%f", p->value.d);
 		break;
 	case OBJ_CONS:
 		fputc('(', fout);
@@ -104,3 +112,38 @@ princ_object(FILE *fout, objectp p)
 		return;
 	}
 }
+/*
+objectp 
+eval(objectp expr)
+{
+	/*
+	if(expr->type == OBJ_NULL) {
+		printf("expr is null\n");
+		getchar();
+		handsig("OBJ_NULL", null);
+	}
+	if(expr == NULL) {
+		printf("expr is NULL\n");
+		getchar();
+		handsig("OBJ_NULL", null);
+	}
+
+	switch(expr->type) {
+		case OBJ_NULL:
+		handsig("OBJ_NULL", null);			
+		case OBJ_T:
+			return t;
+		case OBJ_NIL:
+			return nil;
+		case OBJ_INTEGER:
+			return expr;
+		case OBJ_IDENTIFIER:
+			return get_object(expr);	
+		case OBJ_CONS:
+			return eval_cons(expr);
+		default:
+			return(expr);
+	}
+	handsig("UNKNOWN_ERROR",(objectp) NULL);
+	return null;
+} */

@@ -17,6 +17,11 @@
 #include "funcs.h"
 #include "eval.h"
 #include "misc.h"
+#define EXTRACT_ARGS	\
+		objectp arg1;	\
+		objectp arg2;	\
+		arg1=eval(car(args)); \
+		arg2=eval(cadr(args))	
 
 #define CONSP(p) ( 					\
 		p->type == OBJ_CONS && 		\
@@ -25,7 +30,6 @@
 #define arg car(args)
 
 bool lazy_eval = false;
-
 
 __inline__ 
 objectp bq(objectp args)
@@ -60,74 +64,122 @@ objectp bq(objectp args)
 static objectp 
 F_less(objectp args)
 {
-    objectp a, b;
-    a = eval(car(args));
-    b = eval(cadr(args));
-    ASSERTP(!(a->type == OBJ_INTEGER && b->type == OBJ_INTEGER), LESS);
-	return (a->value.d < b->value.d) ? t : nil;
+	EXTRACT_ARGS;
+	if(arg1->type == OBJ_INTEGER) {
+		if(arg2->type == OBJ_INTEGER)
+			return (arg1->value.i < arg2->value.i) ? t : nil;
+		if(arg2->type == OBJ_DOUBLE)
+			return (arg1->value.i < arg2->value.d) ? t : nil;							
+	} else if(arg1->type == OBJ_DOUBLE) {
+		if(arg2->type == OBJ_INTEGER)
+			return (arg1->value.d < arg2->value.i) ? t : nil;
+		if(arg2->type == OBJ_DOUBLE)
+			return (arg1->value.d < arg2->value.d) ? t : nil;									
+	}
+	return null;
 }
 
 static objectp
 F_lesseq(objectp args)
 {
-    objectp a, b;
-    a = eval(car(args));
-    b = eval(cadr(args));
-    ASSERTP(!(a->type == OBJ_INTEGER && b->type == OBJ_INTEGER), LESS EQ);
-	return (a->value.d <= b->value.d) ? t : nil;
+	EXTRACT_ARGS;
+	if(arg1->type == OBJ_INTEGER) {
+		if(arg2->type == OBJ_INTEGER)
+			return (arg1->value.i <= arg2->value.i) ? t : nil;
+		if(arg2->type == OBJ_DOUBLE)
+			return (arg1->value.i <= arg2->value.d) ? t : nil;							
+	} else if(arg1->type == OBJ_DOUBLE) {
+		if(arg2->type == OBJ_INTEGER)
+			return (arg1->value.d <= arg2->value.i) ? t : nil;
+		if(arg2->type == OBJ_DOUBLE)
+			return (arg1->value.d <= arg2->value.d) ? t : nil;									
+	}
+	return null;
 }
 
 static objectp
 F_great(objectp args)
 {
-    objectp a, b;
-    a = eval(car(args));
-    b = eval(cadr(args));
-    ASSERTP(!(a->type == OBJ_INTEGER && 
-				b->type == OBJ_INTEGER), GREAT);
-	return (a->value.d > b->value.d) ? t : nil;
+	EXTRACT_ARGS;
+	if(arg1->type == OBJ_INTEGER) {
+		if(arg2->type == OBJ_INTEGER)
+			return (arg1->value.i > arg2->value.i) ? t : nil;
+		if(arg2->type == OBJ_DOUBLE)
+			return (arg1->value.i > arg2->value.d) ? t : nil;							
+	} else if(arg1->type == OBJ_DOUBLE) {
+		if(arg2->type == OBJ_INTEGER)
+			return (arg1->value.d > arg2->value.i) ? t : nil;
+		if(arg2->type == OBJ_DOUBLE)
+			return (arg1->value.d > arg2->value.d) ? t : nil;									
+	}
+	return null;
 }
 
 static objectp
 F_greateq(objectp args)
 {
-    objectp a, b;
-    a = eval(car(args));
-    b = eval(cadr(args));
-    ASSERTP(!(a->type == OBJ_INTEGER && 
-				b->type == OBJ_INTEGER), GREAT EQ); 
-	return (a->value.d >= b->value.d) ? t : nil;
+	EXTRACT_ARGS;
+	if(arg1->type == OBJ_INTEGER) {
+		if(arg2->type == OBJ_INTEGER)
+			return (arg1->value.i >= arg2->value.i) ? t : nil;
+		if(arg2->type == OBJ_DOUBLE)
+			return (arg1->value.i >= arg2->value.d) ? t : nil;							
+	} else if(arg1->type == OBJ_DOUBLE) {
+		if(arg2->type == OBJ_INTEGER)
+			return (arg1->value.d >= arg2->value.i) ? t : nil;
+		if(arg2->type == OBJ_DOUBLE)
+			return (arg1->value.d >= arg2->value.d) ? t : nil;									
+	}
+	return null;
 }
 
 static objectp
 F_add(objectp args)
 {
     int i;
+	double d;
     objectp p;
     i = 0;
-	do {
+	d = 0.0;
+    do {
 		p = eval(car(args)); 
-		ASSERTP(p->type != OBJ_INTEGER, ADD);	
-	    i+=p->value.d;
+		if(p->type == OBJ_INTEGER)
+			i += p->value.i;
+		if(p->type == OBJ_DOUBLE)
+			d += p->value.d;
     } while ((args = cdr(args)) != nil);
-	p = new_object(OBJ_INTEGER);
-   	p->value.d = i;
-	return p;
+	if(d == 0.0) {
+		p = new_object(OBJ_INTEGER);
+    	p->value.i = i;
+	} else {
+		p = new_object(OBJ_DOUBLE);
+    	p->value.d = d+i;		
+	}
+    return p;
 }
 
 static objectp
 F_prod(objectp args)
 {
     int i;
+	double d;
     objectp p;
     i = 1;
+	d = 1.0;
     do {
 		p = eval(car(args)); 
-	    ASSERTP(p->type != OBJ_INTEGER, PROD);
-		i = i*p->value.d;
+		if(p->type == OBJ_INTEGER)
+			i *= p->value.i;
+		if(p->type == OBJ_DOUBLE)
+			d *= p->value.d;
     } while ((args = cdr(args)) != nil);
-	p = new_object(OBJ_INTEGER);
-    p->value.d = i;
+	if(d == 1.0) {
+		p = new_object(OBJ_INTEGER);
+    	p->value.i = i;
+	} else {
+		p = new_object(OBJ_DOUBLE);
+    	p->value.d = d*i;		
+	}
     return p;
 }
 
@@ -141,13 +193,13 @@ F_atom(objectp args)
 		case OBJ_NIL: 
 		case OBJ_IDENTIFIER:
 		case OBJ_INTEGER:
+		case OBJ_DOUBLE:
 			return t;
 		case OBJ_CONS:
 			return nil;
-		default:
-			return NULL;
+		default: // if p->type == NULL then eval will break.
+			return null;
 	}
-	ASSERTP(1, ATOM);
 }
 
 objectp 
@@ -156,7 +208,7 @@ F_cond(objectp args)
 	objectp p2;
 	do {
 		p2 = eval(car(car(args)));
-		ASSERTP(p2 == NULL, COND);
+		ASSERTP(p2 == NULL || p2 == null, COND);
 		if (p2 != nil) {
 			if (cdar(args) != nil)
 				return F_progn(cdar(args));
@@ -185,17 +237,17 @@ F_ord(objectp args)
 	i = 0;
 	q = new_object(OBJ_INTEGER);	
 	if(p == nil) {
-		q->value.d = 0;
+		q->value.i = 0;
 		return q;
-	}
-	if (!(cdr(p)->type == OBJ_CONS || cdr(p)->type == OBJ_NIL)) {
-		q->value.d = 1;
+	} else if(CONSP(p)) {
+		q->value.i = 1;
 		return q;
-	}
+	} else if(p->type != OBJ_CONS)
+		return null;
 	do {
 		i++;
 	} while ((p = cdr(p)) != nil);
-	q->value.d = i;
+	q->value.i = i;
 	return q;    
 }
 
@@ -208,7 +260,7 @@ __inline__ static
 __inline__ static
 objectp F_cdr(objectp args)
 {
-	return cdr(eval(arg));
+		return cdr(eval(arg));
 }
 
 objectp 
@@ -225,7 +277,6 @@ F_list(objectp args)
 	do {
 		p1 = new_object(OBJ_CONS);
 		p1->vcar = eval(car(args));
-		ASSERTP(p1->vcar == NULL, LIST);
 		if (first == NULL)
 			first = p1;
 		if (prev != NULL)
@@ -245,7 +296,7 @@ F_map(objectp args)
 	do {
 		p = new_object(OBJ_CONS);
 		p->vcar = new_object(OBJ_CONS);
-		p->vcar->vcar =  car(args);
+		p->vcar->vcar = eval(car(args));
 		p->vcar->vcdr = new_object(OBJ_CONS);
 		p->vcar->vcdr->vcar = new_object(OBJ_CONS);
 		p->vcar->vcdr->vcar->vcar =	new_object(OBJ_IDENTIFIER);
@@ -277,8 +328,6 @@ F_map(objectp args)
 objectp 
 F_quit(objectp args)
 {
-	/* Do i have to free every object it was created? */
-	
 	kill(getppid(), SIGTERM);
 	exit(0);
 	return NULL;
@@ -346,13 +395,25 @@ F_assoc(objectp args)
 {
 	objectp var, val;
 	objectp assoc;
-	var = car(args);
+	var = eval(car(args));
 	assoc = eval(car(cdr(args)));
 	do {
 		val = caar(assoc);
-		if (val->type == OBJ_IDENTIFIER)
-			if (!strcmp(val->value.id, var->value.id))
-				return eval(car(cdr(car(assoc))));
+		if(var->type == val->type) {
+				if(var->type == OBJ_CONS)
+					return car(assoc);
+				if(var->type == OBJ_IDENTIFIER)
+					if(!strcmp(var->value.id, val->value.id))
+						return car(assoc);
+				if(var->type == OBJ_INTEGER)
+					if(var->value.i == val->value.i)
+						return car(assoc);
+				if(var->type == OBJ_DOUBLE)
+					if(var->value.d == val->value.d)
+						return car(assoc);
+				if(var->type == OBJ_T || var->type == OBJ_NIL)
+					return car(assoc);
+		}
 	} while ((assoc = cdr(assoc)) != nil);
 	return null;
 }
@@ -366,7 +427,7 @@ F_progn(objectp args)
 			eval(car(args));
 	} while ((args = cdr(args)) != nil);
 	
-	return try_eval(car(args));
+	return eval(car(args));
 }
 
 objectp 
@@ -414,8 +475,7 @@ F_eqab(objectp a, objectp b)
 		default:
 	    	break;
     }
-    ASSERTP(1, EQ A B);
-	return (objectp) NULL;
+	return null;
 }
 
 objectp
@@ -432,13 +492,15 @@ F_eq(objectp args)
 			return strcmp(a->value.id, b->value.id) == 0 ? t : nil; 
 		case OBJ_CONS:
 			return eqcons(a, b);
-		case OBJ_INTEGER:
+		case OBJ_DOUBLE:
 			return (a->value.d == b->value.d) ? t : nil;
+		case OBJ_INTEGER:
+			return (a->value.i == b->value.i) ? t : nil;
 		default:
 			return t;
 	}
-	ASSERTP(1, EQ);
-	return (objectp) NULL;
+//	ASSERTP(1, EQ);
+	return null;
 }
 
 objectp
@@ -447,6 +509,7 @@ F_member(objectp args)
 	objectp m, x, set;
 	m = eval(car(args));
 	set = eval(cadr(args));
+	ASSERTP(set->type != OBJ_NULL, MEMBER);
 	do {
 		x = car(set);
 		switch (m->type) {
@@ -469,6 +532,11 @@ F_member(objectp args)
 			break;
 		case OBJ_INTEGER:
 			if (x->type == OBJ_INTEGER) 
+				if (x->value.i == m->value.i) 
+					return t;
+			break;
+		case OBJ_DOUBLE:
+			if (x->type == OBJ_DOUBLE) 
 				if (x->value.d == m->value.d) 
 					return t;
 			break;
@@ -486,7 +554,7 @@ F_setq(objectp args)
 	objectp p2;
 	do {
 		p2 = eval(cadr(args));
-		ASSERTP(car(args)->type != OBJ_IDENTIFIER,SETQ); 
+		//ASSERTP(car(args)->type != OBJ_IDENTIFIER,SETQ); 
 		set_object(car(args), p2);
 	} while ((args = cddr(args)) != nil);
 	return p2;
@@ -528,29 +596,6 @@ F_pair(objectp args)
 		p->vcar->vcar = car(p1);
 		p->vcar->vcdr = new_object(OBJ_CONS);
 		p->vcar->vcdr->vcar =car(p2);
-		if (first == NULL)
-			first = p;
-		if (prev != NULL)
-			prev->vcdr = p;
-		prev = p;
-	} while ((p1 = cdr(p1)) != nil && (p2 = cdr(p2)) != nil);
-	return first;
-}
-
-objectp 
-F_pair_neval(objectp args)
-{
-	objectp p, p1, p2, first = NULL, prev = NULL;
-	p1 = car(args);
-	p2 = cadr(args);
-	ASSERTP(p1->type != OBJ_CONS || p2->type != OBJ_CONS ||
-			CONSP(p1) || CONSP(p2),PAIR);
-	do {
-		p = new_object(OBJ_CONS);
-		p->vcar = new_object(OBJ_CONS);
-		p->vcar->vcar = car(p1);
-		p->vcar->vcdr = new_object(OBJ_CONS);
-		p->vcar->vcdr->vcar = car(p2);
 		if (first == NULL)
 			first = p;
 		if (prev != NULL)
@@ -626,34 +671,30 @@ F_let(objectp args)
 	} while ((bind_list = cdr(bind_list)) != nil);
 	return q;
 }
-/*
- * (SUBST 'VAR RPL LIST)
- * (SUBSET '(('VAR_1 RPL1) ('VAR_2 RPL2) ...) LIST)
- */
+
 objectp
 F_subst(objectp args)
 {
 	objectp sym, val, body;
-	sym = car(args);
+	sym=eval(car(args));
 	if (sym->type == OBJ_CONS) {
 		objectp s;
-		s = car(args);
+		s = eval(car(args));
 		body = eval(cadr(args));
 		ASSERTP(body->type != OBJ_CONS, SUBST);
 		do {
 			sym = caar(s);
-			val = eval(cadr(car(s)));
+			val = eval(cdr(car(s)));			
 			body = sst(sym, val, body);			
 		} while ((s = cdr(s)) != nil);
 		return body;
 	} else {
+		val = eval(car(args));
+		sym = eval(car(cdr(args)));
 		body = eval(car(cddr(args)));
-		ASSERTP(body->type != OBJ_CONS, SUBST);
-		val = eval(cadr(args));
 		return sst(sym, val, body);
 	}
-	ASSERTP(1,SUBST);
-	return (objectp) NULL;
+	return null;
 }
 
 objectp 
@@ -695,10 +736,7 @@ F_labels(objectp args)
 objectp 
 F_eval(objectp args)
 {
-//	objectp r;
 	return eval(eval(car(args)));
-//	ASSERTP(1, r == null);
-//	return eval(r);	    
 }
 
 objectp 
@@ -741,29 +779,32 @@ F_typeof(objectp args)
 {
 	objectp p = eval(car(args));
 	switch (p->type) {
+		case OBJ_DOUBLE:
+			printf("REAL\n");
+			break;
 		case OBJ_INTEGER:
-			printf("INTEGER");
+			printf("INTEGER\n");
 			break;
 		case OBJ_NULL:
-			printf("NULL");
+			printf("NULL\n");
 			break;
 	    case OBJ_NIL:
-		    printf("NIL");
+		    printf("NIL\n");
 			break;
 		case OBJ_T:
-			printf("T");
+			printf("T\n");
 			break;
 		case OBJ_CONS:
-			printf("LIST");
+			printf("LIST\n");
 			break;
 		case OBJ_IDENTIFIER:
 			if(strcmp(p->value.id,"LAMBDA") == 1)
-				printf("FUNCTION");
+				printf("FUNCTION\n");
 			else
-				printf("IDENTIFIER");
+				printf("IDENTIFIER\n");
 			break;
 	}
-	return NULL;
+	return t;
 }
 
 objectp 
@@ -858,16 +899,16 @@ F_push(objectp args)
 	set_object(car(cdr(args)), first);
 	return first;
 }
+
 objectp
 F_dump(objectp args)
 {
 	dump_objects();
 	return nil;
-	
 }
 
 funcs functions[FUNCS_N] = {
-	{"*",F_prod},
+	{"*",F_prod}, // BOOL: AND. INT: ARITH. 
 	{"+",F_add},
 	{"<",F_less},
 	{"<=",F_lesseq},
@@ -896,7 +937,6 @@ funcs functions[FUNCS_N] = {
 	{"LABELS",F_labels},
 	{"LET",F_let},
 	{"LIST",F_list},
-	{"LISTP",F_listp},
 	{"MAP",F_map},
 	{"MEMBERP",F_member},
 	{"NOT",F_not},
@@ -904,7 +944,6 @@ funcs functions[FUNCS_N] = {
 	{"OR",F_or},
 	{"ORD",F_ord},
 	{"PAIR" , F_pair},	
-	{"PAIR*",F_pair_neval},	
 	{"POP", F_pop},
 	{"PROD", F_prod },
 	{"PROG1",F_prog1},
@@ -917,6 +956,5 @@ funcs functions[FUNCS_N] = {
 	{"SETQ",F_setq},
 	{"SUBST",F_subst},
 	{"TYPEOF",F_typeof},
-	{"WHILE",F_while},
 	{"XOR",F_xor}
 };

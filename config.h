@@ -40,24 +40,9 @@
 
 #include <stddef.h>
 
-#ifndef HAVE_XMALLOC
 extern inline void *xmalloc(size_t);
-#endif
-
-#ifndef HAVE_XCALLOC
 extern inline void *xcalloc(unsigned int , size_t);
-#endif
-
-#ifndef HAVE_XREALLOC
 extern inline void *xrealloc(void *, size_t);
-#endif
-
-#ifndef HAVE_XSTRDUP
 extern inline char *xstrdup(const char *);
-#endif
-
-#ifndef HAVE_HEAPSORT
 extern int heapsort (void *, size_t, size_t, int (*) (const void *, const void *));
-#endif
-
 extern int write_m(int);

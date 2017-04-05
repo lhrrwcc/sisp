@@ -31,7 +31,7 @@ jmp_buf 	jl;
 void
 init_lex(void)
 {
-	token_buffer_max = 32;
+	token_buffer_max = 64;
 	token_buffer = (char *)xmalloc(token_buffer_max);
 	lex_bufp = lex_buf;
 }
@@ -46,7 +46,6 @@ static char*
 extend_buf(char *p)
 {
 	int off = p - token_buffer;
-	printf("extiendo\n");
 	token_buffer_max += 64;
 	token_buffer = (char *)xrealloc(token_buffer, token_buffer_max);
 
@@ -100,6 +99,7 @@ gettoken(void)
 		case '0': case '1': case '2': case '3':	case '4': case '5': 
 		case '6': case '7': case '8': case '9': case '-':
 			p = token_buffer;
+
 			do {
 				if (p - token_buffer >= token_buffer_max)
 					p = extend_buf(p);
@@ -110,9 +110,22 @@ gettoken(void)
 				xungetc(c);
 				*p = '\0';
 				return INTEGER;
-			} else 
+			} else if(c == '.') {
+				do {
+					if (p - token_buffer >= token_buffer_max)
+						p = extend_buf(p);
+						*p++ = c;
+						c = xgetc();
+				} while (isdigit(c));
+				if (c == ' ' || c == ')' || c == '(' || c == '\n') {
+					xungetc(c);
+					*p = '\0';				
+					return DOUBLE;				
+				}
+			} else
 				CLEAN_BUFFER;
-		case '_': case '+': case '.': 
+		
+		case '_': case '+': 
 		case '*': case '/': case '#': case '<': case '>': case '=': 
 		case '&': case 'a': case 'b': case 'c': case 'd': case 'e': 
 		case 'f': case 'g': case 'h': case 'i': case 'j': case 'k': 

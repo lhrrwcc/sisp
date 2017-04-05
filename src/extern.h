@@ -18,6 +18,8 @@ extern void 	init_objects(void);
 extern objectp 	new_object(a_type);
 extern objectp 	search_object_identifier(char *);
 extern objectp 	search_object_integer(int);
+extern objectp 	search_object_double(double);
+
 extern void 	set_object(objectp, objectp);
 extern objectp 	get_object(objectp);
 extern objectp 	try_object(objectp);
