@@ -40,9 +40,6 @@
 
 #include <stddef.h>
 
-extern inline void *xmalloc(size_t);
-extern inline void *xcalloc(unsigned int , size_t);
-extern inline void *xrealloc(void *, size_t);
-extern inline char *xstrdup(const char *);
+
 extern int heapsort (void *, size_t, size_t, int (*) (const void *, const void *));
 extern int write_m(int);

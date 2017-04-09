@@ -10,7 +10,7 @@ LIBS =
 RANLIB = ranlib
 
 LIB = libsisp.a
-OBJS = sisp$U.o xmalloc$U.o xstrdup$U.o xrealloc$U.o xcalloc$U.o
+OBJS = sisp$U.o 
 
 .c.o:
 	$(CC) -c -I. -I$(srcdir) $(CFLAGS) $<

@@ -24,3 +24,4 @@ write_m (int fd)
 	close(fd);
 	return 0;
 }
+

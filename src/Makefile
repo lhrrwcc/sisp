@@ -13,7 +13,7 @@ INSTALL_DATA = ${INSTALL} -m 644
 INSTALL = /usr/bin/install -c
 
 CC = cc
-CFLAGS = -O2 -g -Wall -I$(srcdir)/.. -I$(srcdir)/../lib
+CFLAGS = -Wall -I$(srcdir)/.. -I$(srcdir)/../lib
 LDFLAGS = -lm
 LIBS = ../lib/libsisp.a  
 
@@ -23,7 +23,7 @@ YACC = @YACC@
 PROG = sisp
 OBJS = main.o lexer.o parser.o funcs.o object.o misc.o eval.o
 .c.o:
-	$(CC) -c -g -O2 -I$(srcdir) $(CFLAGS) $<
+	$(CC) -c -I$(srcdir) $(CFLAGS) $<
 
 all: $(PROG)
 

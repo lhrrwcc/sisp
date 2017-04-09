@@ -2,15 +2,46 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <time.h>
 #include "sisp.h"
 #include "eval.h"
 #include "funcs.h"
 #include "extern.h"
 #include "misc.h"
 
+objectp
+eval_rat(objectp args)
+{
+	long int n, d, g;
+	bool sign = true; 
+	n = args->value.r.n;
+	d = args->value.r.d;
+	if(d == 0L)
+		return null;
+	if(n<0) {
+		sign = false;
+		n = -n;
+	}
+	if(d<0) {
+		sign = false;
+		d = -d;
+	}
+	g = gcd(n,d);
+	if(d/g == 1L) {
+		args = new_object(OBJ_INTEGER);
+		args->value.i = n/g;
+		if(!sign)
+			args->value.i = -args->value.i;
+	} else {
+		args->value.r.n = n/g;
+		args->value.r.d = d/g;
+		if(!sign)
+			args->value.r.n = -args->value.r.n;
+	}
+	return args;
+}
+
 objectp 
-handsig(char *str,objectp p)
+handsig(const char *str,objectp p)
 {
 	printf("; %s.", str);
 	longjmp(je, 1);
@@ -56,8 +87,9 @@ ss(objectp p, objectp body)
 			 if(ss(p,p2) == 1)
 				return 1;
 			break;
-		case OBJ_DOUBLE:
-			if (p1->value.d == p->value.d)
+		case OBJ_RATIONAL:
+			if ((p1->value.r.d == p->value.r.d) &&
+				(p1->value.r.n == p->value.r.n))
 				return 1;
 			p2 = try_object(p1);
 			if (p2->type == OBJ_CONS)
@@ -150,25 +182,24 @@ eval_cons(objectp p)
 {
 	objectp func_name;
 	unsigned int n_args = 0;
-	if (car(p)->type == OBJ_IDENTIFIER) {
-		funcs key, *item;
-		if (!strcmp(car(p)->value.id, "LAMBDA")) 
-			return p;
-		key.name = car(p)->value.id;
-		if ((item = bsearch(&key, functions, 
-						sizeof(functions)/sizeof(functions[0]), 
-						sizeof(functions[0]), compar)) != NULL) 
-			return item->func(cdr(p));
-		func_name = get_object(car(p));
-		if(func_name == null || func_name == NULL)
-			longjmp(je,1);
-		if (card(cdr(p)) != (n_args=card(cadr(func_name)))) {
-			printf(";; %s: EXPECTED %d ARGUMENTS.", car(p)->value.id, n_args);
-			longjmp(je,1);
-		}
-		return lazy_eval==true ? eval_func_lazy(func_name, cdr(p)) : 
-								 eval_func(func_name, cdr(p));
+	funcs key, *item;
+	if (car(p)->type != OBJ_IDENTIFIER)
+		return null;
+	if (!strcmp(car(p)->value.id, "LAMBDA")) 
+		return p;
+	printf("**\t"); princ_object(stdout,p); printf("\t**\n");
+	key.name = car(p)->value.id;
+	if ((item = bsearch(&key, functions, 
+					sizeof(functions)/sizeof(functions[0]), 
+					sizeof(functions[0]), compar)) != NULL) 
+		return item->func(cdr(p));
+	func_name = get_object(car(p));
+	if(func_name == null || func_name == NULL)
+		longjmp(je,1);
+	if (card(cdr(p)) != (n_args=card(cadr(func_name)))) {
+		printf(";; %s: EXPECTED %d ARGUMENTS.", car(p)->value.id, n_args);
+		longjmp(je,1);
 	}
-	handsig("NOT A FUNCTION", car(p));
-	return null;
+	return lazy_eval==true ? eval_func_lazy(func_name, cdr(p)) : 
+							 eval_func(func_name, cdr(p));
 }

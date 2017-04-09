@@ -20,7 +20,7 @@ char *s[] = {
 	"           (t (cons (caar x) (get-names (cdr x))))))\n",	
 	"(defun get-values(x)\n",
 	"    (cond ((eq x nil) nil)",
-	"           (t (cons (cadar x) (get-values (cdr x))))))\n",	
+	"           (t (cons (cdar x) (get-values (cdr x))))))\n",	
 	"(defun unpair(x)\n",
 	"    (list (get-names x) (get-values x)))\n",
 	"(defun rplaca (x y)\n",

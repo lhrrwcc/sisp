@@ -31,36 +31,6 @@
 
 bool lazy_eval = false;
 
-__inline__ 
-objectp bq(objectp args)
-{
-	objectp p1, r, first, prev;
-	first = prev = NULL;
-	do { 
-		p1 = arg;
-		r = new_object(OBJ_CONS);
-		if (p1->type == OBJ_CONS)
-			r->vcar = bq(p1);
-		else if(p1->type == OBJ_IDENTIFIER && 
-				!strcmp(p1->value.id, "COMMA")) { 
-			r->vcar = eval(args);
-			if (first == NULL)
-				first = r;
-			if (prev != NULL)
-				prev->vcdr = r;
-			prev = r;
-			return car(first);
-		} else 
-			r->vcar = p1;
-		if (first == NULL)
-			first = r;
-		if (prev != NULL)
-			prev->vcdr = r;
-		prev = r;
-	} while ((args = cdr(args)) != nil);	
-	return first;
-}
-
 static objectp 
 F_less(objectp args)
 {
@@ -68,13 +38,13 @@ F_less(objectp args)
 	if(arg1->type == OBJ_INTEGER) {
 		if(arg2->type == OBJ_INTEGER)
 			return (arg1->value.i < arg2->value.i) ? t : nil;
-		if(arg2->type == OBJ_DOUBLE)
-			return (arg1->value.i < arg2->value.d) ? t : nil;							
-	} else if(arg1->type == OBJ_DOUBLE) {
+		if(arg2->type == OBJ_RATIONAL)
+			return (arg1->value.i*arg2->value.r.d < arg2->value.r.n) ? t : nil;
+	} else if(arg1->type == OBJ_RATIONAL) {
 		if(arg2->type == OBJ_INTEGER)
-			return (arg1->value.d < arg2->value.i) ? t : nil;
-		if(arg2->type == OBJ_DOUBLE)
-			return (arg1->value.d < arg2->value.d) ? t : nil;									
+			return (arg1->value.r.n < arg1->value.r.d*arg2->value.i) ? t : nil;
+		if(arg2->type == OBJ_RATIONAL)
+			return (arg1->value.r.n*arg2->value.r.d < arg2->value.r.n * arg1->value.r.d) ? t : nil;									
 	}
 	return null;
 }
@@ -86,13 +56,13 @@ F_lesseq(objectp args)
 	if(arg1->type == OBJ_INTEGER) {
 		if(arg2->type == OBJ_INTEGER)
 			return (arg1->value.i <= arg2->value.i) ? t : nil;
-		if(arg2->type == OBJ_DOUBLE)
-			return (arg1->value.i <= arg2->value.d) ? t : nil;							
-	} else if(arg1->type == OBJ_DOUBLE) {
+		if(arg2->type == OBJ_RATIONAL)
+			return (arg1->value.i*arg2->value.r.d <= arg2->value.r.n) ? t : nil;
+	} else if(arg1->type == OBJ_RATIONAL) {
 		if(arg2->type == OBJ_INTEGER)
-			return (arg1->value.d <= arg2->value.i) ? t : nil;
-		if(arg2->type == OBJ_DOUBLE)
-			return (arg1->value.d <= arg2->value.d) ? t : nil;									
+			return (arg1->value.r.n <= arg1->value.r.d*arg2->value.i) ? t : nil;
+		if(arg2->type == OBJ_RATIONAL)
+			return (arg1->value.r.n*arg2->value.r.d <= arg2->value.r.n * arg1->value.r.d) ? t : nil;									
 	}
 	return null;
 }
@@ -104,13 +74,13 @@ F_great(objectp args)
 	if(arg1->type == OBJ_INTEGER) {
 		if(arg2->type == OBJ_INTEGER)
 			return (arg1->value.i > arg2->value.i) ? t : nil;
-		if(arg2->type == OBJ_DOUBLE)
-			return (arg1->value.i > arg2->value.d) ? t : nil;							
-	} else if(arg1->type == OBJ_DOUBLE) {
+		if(arg2->type == OBJ_RATIONAL)
+			return (arg1->value.i*arg2->value.r.d > arg2->value.r.n) ? t : nil;
+	} else if(arg1->type == OBJ_RATIONAL) {
 		if(arg2->type == OBJ_INTEGER)
-			return (arg1->value.d > arg2->value.i) ? t : nil;
-		if(arg2->type == OBJ_DOUBLE)
-			return (arg1->value.d > arg2->value.d) ? t : nil;									
+			return (arg1->value.r.n > arg1->value.r.d*arg2->value.i) ? t : nil;
+		if(arg2->type == OBJ_RATIONAL)
+			return (arg1->value.r.n*arg2->value.r.d > arg2->value.r.n * arg1->value.r.d) ? t : nil;									
 	}
 	return null;
 }
@@ -122,13 +92,13 @@ F_greateq(objectp args)
 	if(arg1->type == OBJ_INTEGER) {
 		if(arg2->type == OBJ_INTEGER)
 			return (arg1->value.i >= arg2->value.i) ? t : nil;
-		if(arg2->type == OBJ_DOUBLE)
-			return (arg1->value.i >= arg2->value.d) ? t : nil;							
-	} else if(arg1->type == OBJ_DOUBLE) {
+		if(arg2->type == OBJ_RATIONAL)
+			return (arg1->value.i*arg2->value.r.d >= arg2->value.r.n) ? t : nil;
+	} else if(arg1->type == OBJ_RATIONAL) {
 		if(arg2->type == OBJ_INTEGER)
-			return (arg1->value.d >= arg2->value.i) ? t : nil;
-		if(arg2->type == OBJ_DOUBLE)
-			return (arg1->value.d >= arg2->value.d) ? t : nil;									
+			return (arg1->value.r.n >= arg1->value.r.d*arg2->value.i) ? t : nil;
+		if(arg2->type == OBJ_RATIONAL)
+			return (arg1->value.r.n*arg2->value.r.d >= arg2->value.r.n * arg1->value.r.d) ? t : nil;									
 	}
 	return null;
 }
@@ -136,51 +106,111 @@ F_greateq(objectp args)
 static objectp
 F_add(objectp args)
 {
-    int i;
-	double d;
+    long int i;
+	long int d, n, g;
     objectp p;
-    i = 0;
-	d = 0.0;
+	i = 0L;
+	d = 1L;
+	n = 0L;
     do {
 		p = eval(car(args)); 
 		if(p->type == OBJ_INTEGER)
 			i += p->value.i;
-		if(p->type == OBJ_DOUBLE)
-			d += p->value.d;
+		if(p->type == OBJ_RATIONAL) {
+			n = (n*p->value.r.d)+(d*p->value.r.n);
+			d *= p->value.r.d;
+		}
     } while ((args = cdr(args)) != nil);
-	if(d == 0.0) {
+	if(n == 0L) {
 		p = new_object(OBJ_INTEGER);
     	p->value.i = i;
+		return p;
 	} else {
-		p = new_object(OBJ_DOUBLE);
-    	p->value.d = d+i;		
+		p = new_object(OBJ_RATIONAL);
+		if(i != 0L)
+			n += d*i;
+		g = gcd(n,d);
+    	p->value.r.n = n/g;
+		p->value.r.d = d/g;
 	}
-    return p;
+    return eval(p);
 }
 
 static objectp
 F_prod(objectp args)
 {
-    int i;
-	double d;
+    long int i;
+	long int d, n,g;
     objectp p;
-    i = 1;
-	d = 1.0;
+    i = 1L;
+	d = 1L;
+	n = 1L;
     do {
 		p = eval(car(args)); 
 		if(p->type == OBJ_INTEGER)
 			i *= p->value.i;
-		if(p->type == OBJ_DOUBLE)
-			d *= p->value.d;
+		else if(p->type == OBJ_RATIONAL) {
+			d *= p->value.r.d;
+			n *= p->value.r.n;
+		}
     } while ((args = cdr(args)) != nil);
-	if(d == 1.0) {
+	if(d == 1L) {
 		p = new_object(OBJ_INTEGER);
     	p->value.i = i;
+		return p;
 	} else {
-		p = new_object(OBJ_DOUBLE);
-    	p->value.d = d*i;		
+		p = new_object(OBJ_RATIONAL);
+    	n = n*i;
+		g = gcd(n,d);
+		p->value.r.n = n/g;
+		p->value.r.d = d/g;
 	}
-    return p;
+    return eval(p);
+}
+
+static objectp
+F_div(objectp args)
+{
+	long int g, u, v;
+	objectp d, n, rat;
+	n = eval(car(args));
+	d = eval(car(cdr(args)));
+
+	if(n->type == OBJ_INTEGER) {
+		g = n->value.i;
+		n = new_object(OBJ_RATIONAL);
+		n->value.r.n = g;
+		n->value.r.d = 1L;
+	}
+	if(d->type == OBJ_INTEGER) {
+		if(d->value.i == 0 )
+			return null;
+		g = d->value.i;
+		d = new_object(OBJ_RATIONAL);
+		d->value.r.n = g;
+		d->value.r.d = 1L;
+	}
+	if(d->value.r.d == 0 || n->value.r.d == 0)
+		return null;
+	u = n->value.r.n*d->value.r.d;
+	v = n->value.r.d*d->value.r.n;
+	g = gcd(u, v);
+	u = u/g;
+	v = v/g;
+	if(v == 1L) {
+		rat = new_object(OBJ_INTEGER);
+		rat->value.i = u;
+		return rat;
+	}
+	rat = new_object(OBJ_RATIONAL);
+	if(v<0L) {
+		rat->value.r.n = -u;
+		rat->value.r.d = -v;
+	} else {
+		rat->value.r.n = u;
+		rat->value.r.d = v;
+	}
+	return rat; 
 }
 
 objectp 
@@ -193,7 +223,7 @@ F_atom(objectp args)
 		case OBJ_NIL: 
 		case OBJ_IDENTIFIER:
 		case OBJ_INTEGER:
-		case OBJ_DOUBLE:
+		case OBJ_RATIONAL:
 			return t;
 		case OBJ_CONS:
 			return nil;
@@ -293,6 +323,11 @@ F_map(objectp args)
 	first = prev = NULL;
 	p1 = eval(cadr(args));
 	ASSERTP(p1->type != OBJ_CONS, MAP);
+	p = eval(car(args));
+	if(p->type != OBJ_IDENTIFIER)
+		return null;
+	if(eval(p)->type != OBJ_CONS)
+		return null;
 	do {
 		p = new_object(OBJ_CONS);
 		p->vcar = new_object(OBJ_CONS);
@@ -300,7 +335,7 @@ F_map(objectp args)
 		p->vcar->vcdr = new_object(OBJ_CONS);
 		p->vcar->vcdr->vcar = new_object(OBJ_CONS);
 		p->vcar->vcdr->vcar->vcar =	new_object(OBJ_IDENTIFIER);
-		p->vcar->vcdr->vcar->vcar->value.id = xstrdup("QUOTE");
+		p->vcar->vcdr->vcar->vcar->value.id = strdup("QUOTE");
  		p->vcar->vcdr->vcar->vcdr = new_object(OBJ_CONS);
 		p->vcar->vcdr->vcar->vcdr->vcar = car(p1);
 		p->vcar->vcdr->vcar->vcdr->vcdr = nil;
@@ -407,15 +442,16 @@ F_assoc(objectp args)
 						return car(assoc);
 				if(var->type == OBJ_INTEGER)
 					if(var->value.i == val->value.i)
-						return car(assoc);
-				if(var->type == OBJ_DOUBLE)
-					if(var->value.d == val->value.d)
+						return car(assoc);		
+				if(var->type == OBJ_RATIONAL)
+					if((var->value.r.n == val->value.r.n) &&
+						(var->value.r.d == val->value.r.d))
 						return car(assoc);
 				if(var->type == OBJ_T || var->type == OBJ_NIL)
 					return car(assoc);
 		}
 	} while ((assoc = cdr(assoc)) != nil);
-	return null;
+	return nil;
 }
 
 __inline__ objectp
@@ -424,9 +460,8 @@ F_progn(objectp args)
 	do {
 		if (cdr(args) == nil)
 			break;
-			eval(car(args));
-	} while ((args = cdr(args)) != nil);
-	
+		eval(car(args));
+	} while ((args = cdr(args)) != nil);	
 	return eval(car(args));
 }
 
@@ -463,22 +498,6 @@ F_prog2(objectp args)
 }
 
 objectp
-F_eqab(objectp a, objectp b)
-{
-    if (a->type != b->type)
-		return nil;
-    switch (a->type) {
-		case OBJ_IDENTIFIER:
-	    	return strcmp(a->value.id, b->value.id) == 0 ? t : nil;
-		case OBJ_CONS:
-			return eqcons(a, b);
-		default:
-	    	break;
-    }
-	return null;
-}
-
-objectp
 F_eq(objectp args)
 {
 	objectp a, b;
@@ -492,14 +511,14 @@ F_eq(objectp args)
 			return strcmp(a->value.id, b->value.id) == 0 ? t : nil; 
 		case OBJ_CONS:
 			return eqcons(a, b);
-		case OBJ_DOUBLE:
-			return (a->value.d == b->value.d) ? t : nil;
+		case OBJ_RATIONAL:
+			return ((a->value.r.n == b->value.r.n) &&
+					(a->value.r.d == b->value.r.d)) ? t : nil;
 		case OBJ_INTEGER:
 			return (a->value.i == b->value.i) ? t : nil;
 		default:
 			return t;
 	}
-//	ASSERTP(1, EQ);
 	return null;
 }
 
@@ -509,9 +528,12 @@ F_member(objectp args)
 	objectp m, x, set;
 	m = eval(car(args));
 	set = eval(cadr(args));
-	ASSERTP(set->type != OBJ_NULL, MEMBER);
+	if(set->type != OBJ_CONS)
+		return null;
 	do {
 		x = car(set);
+		if(x->type == OBJ_NULL)
+			return null;
 		switch (m->type) {
 		case OBJ_IDENTIFIER:
 			if (x->type == OBJ_IDENTIFIER && 
@@ -535,9 +557,10 @@ F_member(objectp args)
 				if (x->value.i == m->value.i) 
 					return t;
 			break;
-		case OBJ_DOUBLE:
-			if (x->type == OBJ_DOUBLE) 
-				if (x->value.d == m->value.d) 
+		case OBJ_RATIONAL:
+			if (x->type == OBJ_RATIONAL) 
+				if ((x->value.r.d == m->value.r.d) &&
+					(x->value.r.n == m->value.r.n)) 
 					return t;
 			break;
 		default:
@@ -558,12 +581,6 @@ F_setq(objectp args)
 		set_object(car(args), p2);
 	} while ((args = cddr(args)) != nil);
 	return p2;
-}
-
-objectp 
-F_listp(objectp args)
-{
-	return eval(car(args))->type == OBJ_CONS ? t : nil;
 }
 
 objectp 
@@ -677,11 +694,14 @@ F_subst(objectp args)
 {
 	objectp sym, val, body;
 	sym=eval(car(args));
+
 	if (sym->type == OBJ_CONS) {
 		objectp s;
 		s = eval(car(args));
 		body = eval(cadr(args));
-		ASSERTP(body->type != OBJ_CONS, SUBST);
+		princ_object(stdout,body);
+		if(body->type != OBJ_CONS)
+			return null;
 		do {
 			sym = caar(s);
 			val = eval(cdr(car(s)));			
@@ -692,6 +712,8 @@ F_subst(objectp args)
 		val = eval(car(args));
 		sym = eval(car(cdr(args)));
 		body = eval(car(cddr(args)));
+		if(body->type != OBJ_CONS)
+			return null;
 		return sst(sym, val, body);
 	}
 	return null;
@@ -703,7 +725,7 @@ F_labels(objectp args)
 	objectp var, bind, bind_list, body, r, q, s, first, prev;
 	first = prev = NULL;
 	bind_list = car(args);
-	ASSERTP((bind_list->type!=OBJ_CONS || bind_list == nil), LABELS);
+	ASSERTP((bind_list->type != OBJ_CONS || bind_list == nil), LABELS);
 	body = cdr(args);
 	ASSERTP((body->type != OBJ_CONS || body == nil), LABELS);
 	do {
@@ -711,7 +733,7 @@ F_labels(objectp args)
 		var = cdar(bind_list);
 		s = new_object(OBJ_CONS);
 		s->vcar = new_object(OBJ_IDENTIFIER);
-		s->vcar->value.id = xstrdup("LAMBDA");
+		s->vcar->value.id = strdup("LAMBDA");
 		s->vcdr = var; 
 		r = new_object(OBJ_CONS);
 		r->vcar = try_eval(bind);
@@ -746,11 +768,11 @@ F_defmacro(objectp args)
 	p1 = car(args);
 	p4 = new_object(OBJ_CONS);
 	p4->vcar = new_object(OBJ_IDENTIFIER);
-	p4->vcar->value.id = xstrdup("BACKQUOTE");
+	p4->vcar->value.id = strdup("BQUOTE");
 	p4->vcdr = cddr(args);
 	lexpr = new_object(OBJ_CONS);
 	lexpr->vcar = new_object(OBJ_IDENTIFIER);
-	lexpr->vcar->value.id = xstrdup("LAMBDA");
+	lexpr->vcar->value.id = strdup("LAMBDA");
 	lexpr->vcdr = new_object(OBJ_CONS);
 	lexpr->vcdr->vcar = cadr(args);
 	lexpr->vcdr->vcdr = new_object(OBJ_CONS);
@@ -766,7 +788,7 @@ F_defun(objectp args)
 	p1 = car(args);
 	lexpr = new_object(OBJ_CONS);
 	lexpr->vcar = new_object(OBJ_IDENTIFIER);
-	lexpr->vcar->value.id = xstrdup("LAMBDA");
+	lexpr->vcar->value.id = strdup("LAMBDA");
 	lexpr->vcdr = new_object(OBJ_CONS);
 	lexpr->vcdr->vcar = cadr(args);
 	lexpr->vcdr->vcdr = cddr(args);
@@ -779,14 +801,14 @@ F_typeof(objectp args)
 {
 	objectp p = eval(car(args));
 	switch (p->type) {
-		case OBJ_DOUBLE:
-			printf("REAL\n");
+		case OBJ_RATIONAL:
+			printf("RATIONAL\n");
 			break;
 		case OBJ_INTEGER:
 			printf("INTEGER\n");
 			break;
 		case OBJ_NULL:
-			printf("NULL\n");
+			printf("UNDEFINED\n");
 			break;
 	    case OBJ_NIL:
 		    printf("NIL\n");
@@ -795,7 +817,7 @@ F_typeof(objectp args)
 			printf("T\n");
 			break;
 		case OBJ_CONS:
-			printf("LIST\n");
+			printf("CONS\n");
 			break;
 		case OBJ_IDENTIFIER:
 			if(strcmp(p->value.id,"LAMBDA") == 1)
@@ -823,13 +845,6 @@ F_setlazy(objectp args)
 	return null;
 }
 
-objectp 
-F_gc(objectp args)
-{
-	garbage_collect();
-	return NULL;
-}
-
 objectp
 F_xor(objectp args)
 {
@@ -847,7 +862,7 @@ F_evlis(objectp args)
 {
 	objectp p, first, prev;
 	first = prev = NULL;
-	args = car(args);
+	args = eval(car(args));
 	ASSERTP(args->type != OBJ_CONS, EVLIS);
 	do { 
 		p = new_object(OBJ_CONS);
@@ -908,19 +923,19 @@ F_dump(objectp args)
 }
 
 funcs functions[FUNCS_N] = {
-	{"*",F_prod}, // BOOL: AND. INT: ARITH. 
+	{"*",F_prod}, 
 	{"+",F_add},
+	{"/", F_div},
 	{"<",F_less},
 	{"<=",F_lesseq},
 	{"=",F_eq},
 	{">",F_great},
 	{">=", F_greateq},
-	{"ADD",F_add },
 	{"AND",F_and},
 	{"APPEND",F_append},
 	{"ASSOC", F_assoc},
 	{"ATOMP",F_atom},
-	{"BACKQUOTE",F_bquote},
+	{"BQUOTE",F_bquote},
 	{"CAR",F_car},
 	{"CDR",F_cdr},
 	{"COMMA",F_comma},
@@ -940,19 +955,18 @@ funcs functions[FUNCS_N] = {
 	{"MAP",F_map},
 	{"MEMBERP",F_member},
 	{"NOT",F_not},
-	{"NULL",F_not},
+	{"NULL", F_not},
 	{"OR",F_or},
 	{"ORD",F_ord},
 	{"PAIR" , F_pair},	
 	{"POP", F_pop},
-	{"PROD", F_prod },
 	{"PROG1",F_prog1},
 	{"PROG2",F_prog2},
 	{"PROGN",F_progn},
 	{"PUSH", F_push},
 	{"QUIT",F_quit},
 	{"QUOTE",F_quote},
-	{"SETLAZYEVAL",	F_setlazy},
+	{"SETLAZY",	F_setlazy},
 	{"SETQ",F_setq},
 	{"SUBST",F_subst},
 	{"TYPEOF",F_typeof},

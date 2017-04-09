@@ -3,7 +3,7 @@
 extern bool		lazy_eval;
 extern int 		getchl(void);
 extern char 	*buffer;
-//extern objectp used_objs_list;
+
 extern jmp_buf 	jb;
 extern jmp_buf 	je;
 extern jmp_buf 	jl;
@@ -11,20 +11,20 @@ extern jmp_buf 	jl;
 extern objectp 	nil;
 extern objectp 	t;
 extern objectp 	null;
-//extern int free_objs;
-//extern int used_objs;
+
 extern void 	remove_from_v(void);
 extern void 	init_objects(void);
 extern objectp 	new_object(a_type);
 extern objectp 	search_object_identifier(char *);
-extern objectp 	search_object_integer(int);
-extern objectp 	search_object_double(double);
+extern objectp 	search_object_integer(long int);
+extern objectp 	search_object_rational(long int, long int);
 
 extern void 	set_object(objectp, objectp);
 extern objectp 	get_object(objectp);
 extern objectp 	try_object(objectp);
-extern objectp 	handsig(char *, objectp);
+extern objectp 	handsig(const char *, objectp);
 extern void 	garbage_collect(void);
+extern void 	dump_objects(void);
 /* parser.c */
 extern objectp 	parse_object(int);
 /* lexer.c */

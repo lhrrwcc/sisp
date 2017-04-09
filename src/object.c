@@ -15,7 +15,7 @@
 
 #define HANDSIG(ARG,EXP)			\
 	do { if (ARG==NULL)	{			\
-		printf(";; " #EXP "."); 	\
+		printf("; " #EXP "."); 	\
 		longjmp(je, 1); }			\
 	} while(0)
 
@@ -24,7 +24,7 @@ objectp 			t;
 objectp 			null;
 static objectp 		free_objs_list = NULL;
 static objectp 		used_objs_list = NULL;
-static object_pairp setobjs_list = NULL;
+static object_pairp setobjs_list   = NULL;
 static unsigned int gc_id = 0;
 static int 			free_objs = 0;
 static int 			used_objs = 0;
@@ -33,9 +33,8 @@ __inline__ objectp
 new_object(a_type type)
 {
 	objectp p;
-
 	if (free_objs_list == NULL)
-		p = (objectp) xmalloc(sizeof(struct object));
+		p = (objectp) malloc(sizeof(struct object));
 	else { 
 		p = free_objs_list;
 		free_objs_list = free_objs_list->next;
@@ -44,28 +43,26 @@ new_object(a_type type)
 	p->next = used_objs_list;
 	used_objs_list = p;
 	p->type = type;
-	if (type == OBJ_CONS) { 
-		p->vcar = nil;
-		p->vcdr = nil;
-	}
+	if (type == OBJ_CONS) 
+		p->vcar = p->vcdr = nil;
 	p->gc = 0;
 	++used_objs;
-	
 	return p;
 }
 
 __inline__  objectp 
-search_object_double(double d)
+search_object_rational(long int num, long int den)
 {
 	objectp p;
 	for (p = used_objs_list; p != NULL; p = p->next)
-		if (p->type == OBJ_INTEGER && p->value.d == d)
-			return p;
+		if (p->type == OBJ_RATIONAL)
+			if(p->value.r.n == num && p->value.r.d == den)
+				return p; 
 	return (objectp) NULL;
 }
 
 __inline__  objectp 
-search_object_integer(int i)
+search_object_integer(long int i)
 {
 	objectp p;
 	for (p = used_objs_list; p != NULL; p = p->next)
@@ -91,22 +88,26 @@ init_objects(void)
 	t		= new_object(OBJ_T);
 	null	= new_object(OBJ_NULL);
 }
-/* (SETQ ID VALUE)
-	id = */
 
 void
 set_object(objectp name, objectp value)
 {
-	object_pairp p;
+	object_pairp p, next;
 	HANDSIG(value, SET OBJECT);
 	if (name->type != OBJ_IDENTIFIER)
 		return;
-	for (p = setobjs_list; p != NULL; p = p->next)
+	for (p = setobjs_list; p != NULL; p = next) {
+		next = p->next;
 		if (p->name->value.id != NULL && !strcmp(name->value.id, p->name->value.id)) {
+			if (value->type == OBJ_NULL) {
+				setobjs_list = next;
+				return;
+			}
 			p->value = value;
 			return;
 		}
-	p = (object_pairp)xmalloc(sizeof(struct object_pair));
+	}
+	p = (object_pairp) malloc(sizeof(struct object_pair));
 	p->next = setobjs_list;
 	setobjs_list = p;
 	p->name = name;
@@ -149,23 +150,23 @@ dump_objects(void)
 	object_pairp p;
 	objectp q;
 	printf("st: %d\tft: %d\n",used_objs, free_objs);
+
 	printf("objetos guardados: \n");
 	for (p = setobjs_list; p != NULL; p = p->next) {
-		printf("%p::%s:: ", p, p->name->value.id);
 		if(p->value->type == OBJ_NULL) {
-			printf("%s is NULL", p->name->value.id);
-		}
-		princ_object(stdout, p->value);
-		printf("\n");
+			printf("(%p:%p-%p):%s is NULL\n",p,p->name,p->value, p->name->value.id);
+		} else if(p->name->type == OBJ_IDENTIFIER)
+		printf("%p:%s\n",p,p->name->value.id);
 	}
-	return;
+
 	printf("valores guardados: \n");
 	for (q = used_objs_list; q != NULL; q = q->next) {
+		if(q->type == OBJ_NULL) {
 		princ_object(stdout, q);
 		printf("\n");
-	}	
-
-}
+		}
+	}
+}	
 
 __inline__ static void
 tag_tree(objectp p)
@@ -187,15 +188,6 @@ tag_whole_tree(void)
 		tag_tree(p->name);
 		tag_tree(p->value);
 	}
-}
-
-void 
-remove_from_v(void)
-{
-	object_pairp q;
-	for (q = setobjs_list; q != NULL; q = q->next)
-		if (q->value->type == OBJ_NULL)
-			setobjs_list = setobjs_list->next;
 }
 
 __inline__ void 
