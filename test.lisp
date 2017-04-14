@@ -1,27 +1,18 @@
-(DEFUN AN(X) (IF (<= X 0) X (+ -1 (AN (+ -1 X)))))
-(DEFUN AP(X) (IF (<= X 0) X (+ 1 (AP (+ -1 X)))))
-(DEFUN SP(X) (IF (<= X 0) X (+ X (SP (+ -1 X)))))
-(DEFUN SN(X) (IF (<= X 0) X (+ (* -1 X) (SN (+ -1 X)))))
-(DEFUN B(X) (LIST (AN X) (AP X) (SP X) (SN X)))
-(DEFUN A(X) (IF (= X 0) NIL (LIST (B 100) (B 200) (B 300) (B 400))))
-(DEFUN C(X) (IF (= X NIL) (A X) (CONS X (C (CDR X)))))
-(DEFUN D(X) (IF (= X NIL) (A X) (CONS (D (CDR X)) (C (CDR X)))))
-(DEFUN M(X Y) (IF (= X NIL) (A X) (CONS (M (CDR X) (CONS (CDR X) (LIST Y ))))))
-(DEFUN E(X) (IF (= X NIL) (A X) (CONS (M (A (A X)) (A (A X))) (CONS (D (CDR X)) (C (CDR X))))))
-(DEFUN LIS(X) (IF (= X NIL) (A X) (CONS X (CDR X))))
-(DEFUN F(X) (CONS  (E (LIST (LIS X) (LIS X) (LIS X))) 
-(CONS  (E (LIST (LIS X) (LIS X) (LIS X))) 
-(CONS  (E (LIST (LIS X) (LIS X) (LIS X))) 
-(CONS  (E (LIST (LIS X) (LIS X) (LIS X))) 
-(CONS  (E (LIST (LIS X) (LIS X) (LIS X))) 
-nil))))))
+(DEFUN M(X)
+(IF (= X 1) 1
+(+ (/ 1 X) (M (+ X -1)))))
 
-(DEFUN Z()
-(CONS 
-    (F (LIST 0 1 2 3 4))
-    (CONS (F (LIST 0 1 2 3 4 5))
-            (CONS (F (LIST 0 1 2 3 4 5 6))
-                (CONS (F (LIST 0 1 2 3 4 5 6 7))
-                    (CONS (F (LIST 0 1 2 3 4 5 6 7 8))
-                        (CONS (F (LIST 0 1 2 3 4 5 6 7 8 9))
-                            (CONS (F (LIST 0 1 2 3 4 5 6 7 8 9 0)) NIL))))))))
+(DEFUN Z(X)
+(IF (= X 100) 100
+	(* (+ (M X) (Z (+ X 1)))))) 
+
+(DEFUN G(X)
+(IF (= X 1) 1
+	(+ (/ 1 X) (G (+ X -1)))))
+
+(DEFUN F(A B C D E H I J K L)
+(IF (= A 0) 1
+	(+ 1 (F (+ A -1) (G B) (G C) (G D) (G E) (G H) (G I) (G J) (G K) (G L)))))
+
+(DEFUN TEST(X)
+	(F X X X X X X X X X X))

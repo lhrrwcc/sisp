@@ -6,6 +6,7 @@ typedef enum	{false, true} bool;
 	
 typedef enum 	{OBJ_NULL, OBJ_NIL, OBJ_T, OBJ_IDENTIFIER,
 				OBJ_CONS, OBJ_INTEGER, OBJ_RATIONAL} a_type;
+
 typedef struct 	object *objectp;
 
 struct object {
@@ -43,4 +44,5 @@ typedef struct {
 #define vcdr	value.c.cdr
 
 #define SISP_H
+
 #endif

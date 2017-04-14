@@ -1,19 +1,15 @@
-#	$Id: Makefile.in,v 1.2 2001/08/10 15:36:57 sandro Exp $
-
 srcdir = .
-
-
 CC = cc
-CFLAGS = -g -I.. -ansi -funroll-loops -finline-functions -O3 
+CFLAGS = -ansi -funroll-loops -finline-functions -O3 
 
 LIBS = 
 RANLIB = ranlib
 
 LIB = libsisp.a
-OBJS = sisp$U.o 
+OBJS = libsisp$U.o 
 
 .c.o:
-	$(CC) -c -I. -I$(srcdir) $(CFLAGS) $<
+	$(CC) -c -I.. -I. -I$(srcdir) $(CFLAGS) $<
 
 all: $(LIB)
 
@@ -38,4 +34,4 @@ realclean: distclean
 
 mostlyclean: clean
 
-$(OBJS): sisp.h
+$(OBJS): libsisp.h

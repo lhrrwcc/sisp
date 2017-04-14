@@ -3,7 +3,7 @@
 extern bool		lazy_eval;
 extern int 		getchl(void);
 extern char 	*buffer;
-
+extern int write_m(int);
 extern jmp_buf 	jb;
 extern jmp_buf 	je;
 extern jmp_buf 	jl;
@@ -22,7 +22,7 @@ extern objectp 	search_object_rational(long int, long int);
 extern void 	set_object(objectp, objectp);
 extern objectp 	get_object(objectp);
 extern objectp 	try_object(objectp);
-extern objectp 	handsig(const char *, objectp);
+extern objectp 	handsig(const char *);
 extern void 	garbage_collect(void);
 extern void 	dump_objects(void);
 /* parser.c */
@@ -34,4 +34,5 @@ extern void 	init_lex(void);
 extern int 		gettoken(void);
 /* funcs.c */
 #define _EXTERN_H
+
 #endif

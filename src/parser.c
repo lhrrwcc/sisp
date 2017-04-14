@@ -1,4 +1,3 @@
-#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,23 +9,23 @@
 #define PARSE_COMMA									\
 	p = new_object(OBJ_CONS);						\
 	p->value.c.car = new_object(OBJ_IDENTIFIER);	\
-	p->value.c.car->value.id = strdup("COMMA");	\
+	p->value.c.car->value.id = strdup("COMMA");		\
 	p->value.c.cdr = new_object(OBJ_CONS);			\
-	p->value.c.cdr->value.c.car = parse_object(0);	
+	p->value.c.cdr->value.c.car = parse_object(0)	
 
 #define PARSE_QUOTE									\
 	p = new_object(OBJ_CONS);						\
 	p->value.c.car = new_object(OBJ_IDENTIFIER);	\
-	p->value.c.car->value.id = strdup("QUOTE");	\
+	p->value.c.car->value.id = strdup("QUOTE");		\
 	p->value.c.cdr = new_object(OBJ_CONS);			\
-	p->value.c.cdr->value.c.car = parse_object(0);	
+	p->value.c.cdr->value.c.car = parse_object(0)	
 
 #define PARSE_BACKQUOTE 							\
 	p = new_object(OBJ_CONS);						\
 	p->value.c.car = new_object(OBJ_IDENTIFIER);	\
-	p->value.c.car->value.id = strdup("BQUOTE");\
+	p->value.c.car->value.id = strdup("BQUOTE");	\
 	p->value.c.cdr = new_object(OBJ_CONS);			\
-	p->value.c.cdr->value.c.car = parse_object(0);	
+	p->value.c.cdr->value.c.car = parse_object(0)	
 
 static int thistoken;
 
@@ -74,38 +73,38 @@ parse_object(int havetoken)
 		case EOF:
 			return NULL;
 		case '`':
-			PARSE_BACKQUOTE
+			PARSE_BACKQUOTE;
 			break;
 		case ',':
-			PARSE_COMMA
+			PARSE_COMMA;
 			break;
 		case '(':
 			p = parse_form();
 			break;
 		case '\'':
-			PARSE_QUOTE
+			PARSE_QUOTE;
 			break;
 		case IDENTIFIER:
 			if (!strcmp(token_buffer, "T"))
 				p = t;
 			else if (!strcmp(token_buffer, "NIL"))
 				p = nil;
-			else 
-				if ((p = search_object_identifier(token_buffer)) == NULL) {
+			else if ((p = search_object_identifier(token_buffer)) == NULL) {
 					p = new_object(OBJ_IDENTIFIER);
 					p->value.id = strdup(token_buffer);
-				}
+			}
 			break;
 		case INTEGER:
-			if ((p = search_object_integer(strtoll(token_buffer, NULL, 10))) == NULL) {
+			n = strtol(token_buffer, NULL, 10);
+			if ((p = search_object_integer(n)) == NULL) {
 				p = new_object(OBJ_INTEGER);
-				p->value.i = strtol(token_buffer, NULL, 10);
+				p->value.i = n;
 			}
 			break;
 		case RATIONAL:
-			n=strtol(token_buffer, &delim, 10);
+			n = strtol(token_buffer, &delim, 10);
 			delim++;
-			d=strtol(delim, NULL, 10);
+			d = strtol(delim, NULL, 10);
 			if ((p = search_object_rational(n,d)) == NULL) {
 				p = new_object(OBJ_RATIONAL);
 				p->value.r.n = n;

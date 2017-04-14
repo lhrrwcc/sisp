@@ -1,4 +1,3 @@
-#include "config.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,7 +8,7 @@
 
 #define LEX_BUF_MAX 1024
 #define xgetc() ((lex_bufp > lex_buf) ? *--lex_bufp : \
-		toupper(fgetc(input_file)))
+				toupper(fgetc(input_file)))
 #define xungetc(c) *lex_bufp++ = c
 #define CLEAN_BUFFER 	\
 	do {				\
@@ -46,7 +45,7 @@ static char*
 extend_buf(char *p)
 {
 	int off = p - token_buffer;
-	token_buffer_max += 64;
+	token_buffer_max += 128;
 	token_buffer = (char *) realloc(token_buffer, token_buffer_max);
 
 	return token_buffer + off;
@@ -105,7 +104,7 @@ gettoken(void)
 				*p++ = c;
 				c = xgetc();
 			} while (isdigit(c));
-			if (c == ' ' || c == ')' || c == '(' || c == '\n') {
+			if (c == ' ' || c == ')' || c == '(' || c == '\n' || c == EOF) {
 				xungetc(c);
 				*p = '\0';
 				return INTEGER;
@@ -116,31 +115,30 @@ gettoken(void)
 						*p++ = c;
 						c = xgetc();
 				} while (isdigit(c));
-				if (c == ' ' || c == ')' || c == '(' || c == '\n') {
+				if (c == ' ' || c == ')' || c == '(' || c == '\n' || c == EOF) {
 					xungetc(c);
 					*p = '\0';				
 					return RATIONAL;				
 				}
 			} else
 				CLEAN_BUFFER;
-		case '_': case '+':
-		case '*': case '/': case '#': case '<': case '>': case '=': 
-		case '&': case 'a': case 'b': case 'c': case 'd': case 'e': 
-		case 'f': case 'g': case 'h': case 'i': case 'j': case 'k': 
-		case 'l': case 'm': case 'n': case 'o': case 'p': case 'q': 
-		case 'r': case 's': case 't': case 'u': case 'v': case 'w': 
-		case 'x': case 'y': case 'z': case 'A': case 'B': case 'C': 
-		case 'D': case 'E': case 'F': case 'G': case 'H': case 'I': 
-		case 'J': case 'K': case 'L': case 'M': case 'N': case 'O': 
-		case 'P': case 'Q': case 'R': case 'S': case 'T': case 'U': 
-		case 'V': case 'W': case 'X': case 'Y': case 'Z':
+		case '*': case '+': case '/': case '<': case '=': case '>':
+		case '_': case '#':	case 'a': case 'b': case 'c': case 'd': 
+		case 'e': case 'f': case 'g': case 'h': case 'i': case 'j': 
+		case 'k': case 'l': case 'm': case 'n': case 'o': case 'p': 
+		case 'q': case 'r': case 's': case 't': case 'u': case 'v': 
+		case 'w': case 'x': case 'y': case 'z': case 'A': case 'B': 
+		case 'C': case 'D': case 'E': case 'F': case 'G': case 'H': 
+		case 'I': case 'J': case 'K': case 'L': case 'M': case 'N': 
+		case 'O': case 'P': case 'Q': case 'R': case 'S': case 'T': 
+		case 'U': case 'V': case 'W': case 'X': case 'Y': case 'Z':
 			p = token_buffer;
 			do {
 				if (p - token_buffer >= token_buffer_max)
 					p = extend_buf(p);
 				*p++ = c;
 				c = xgetc();
-			} while (isalnum(c) || strchr("_-+*#<>=&", c) != NULL);
+			} while (isalnum(c) || strchr("*+/<=>-_#", c) != NULL);
 			xungetc(c);
 			*p = '\0';
 			return IDENTIFIER;

@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <err.h>
 #include <setjmp.h>
-#include "config.h"
 #include "sisp.h"
 #include "extern.h"
 #include "eval.h"
@@ -77,7 +76,7 @@ main(int argc, char **argv)
  	if ((fd = mkstemp(buildf)) > 0) {
 		if (write_m(fd) != 0) {
 			unlink(buildf);
-			warnx("%s", write_m);
+			warnx("cannot create file\n");
 		}
 		process_file(buildf);
 		unlink(buildf);

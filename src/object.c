@@ -8,15 +8,14 @@
 #include <fcntl.h>
 #include <err.h>
 #include <signal.h>
-#include "config.h"
 #include "sisp.h"
 #include "extern.h"
 #include "misc.h"
 
-#define HANDSIG(ARG,EXP)			\
-	do { if (ARG==NULL)	{			\
-		printf("; " #EXP "."); 	\
-		longjmp(je, 1); }			\
+#define HANDSIG(ARG,EXP)				\
+	do { if (ARG==NULL)	{				\
+		fprintf(stderr, "; " #EXP ".");	\
+		longjmp(je, 1); }				\
 	} while(0)
 
 objectp 			nil;
@@ -95,7 +94,7 @@ set_object(objectp name, objectp value)
 	object_pairp p, next;
 	HANDSIG(value, SET OBJECT);
 	if (name->type != OBJ_IDENTIFIER)
-		return;
+		HANDSIG(NULL, SET OBJECT);
 	for (p = setobjs_list; p != NULL; p = next) {
 		next = p->next;
 		if (p->name->value.id != NULL && !strcmp(name->value.id, p->name->value.id)) {

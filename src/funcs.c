@@ -11,7 +11,6 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <errno.h>
-#include "config.h"
 #include "sisp.h"
 #include "extern.h"
 #include "funcs.h"
@@ -28,13 +27,22 @@
 		cdr(p)->type != OBJ_CONS && \
 		cdr(p) != nil )
 #define arg car(args)
-
 bool lazy_eval = false;
+
+#define __ASSERTP(COND,ARG,F) 				\
+	do { if(COND) { 						\
+	fprintf(stderr,"; " #F ": " #ARG ".");	\
+	longjmp(je,1); } 						\
+	} while(0)
 
 static objectp 
 F_less(objectp args)
 {
-	EXTRACT_ARGS;
+	objectp arg1, arg2;
+	arg1 = eval(car(args));
+	arg2 = eval(cadr(args));	
+	__ASSERTP(arg1->type + arg2->type < 10, NON NUMERIC ARGUMENT, <);
+
 	if(arg1->type == OBJ_INTEGER) {
 		if(arg2->type == OBJ_INTEGER)
 			return (arg1->value.i < arg2->value.i) ? t : nil;
@@ -52,7 +60,11 @@ F_less(objectp args)
 static objectp
 F_lesseq(objectp args)
 {
-	EXTRACT_ARGS;
+	objectp arg1, arg2;
+	arg1 = eval(car(args));
+	arg2 = eval(cadr(args));	
+	__ASSERTP(arg1->type + arg2->type < 10, NON NUMERIC ARGUMENT, <=);
+
 	if(arg1->type == OBJ_INTEGER) {
 		if(arg2->type == OBJ_INTEGER)
 			return (arg1->value.i <= arg2->value.i) ? t : nil;
@@ -70,7 +82,11 @@ F_lesseq(objectp args)
 static objectp
 F_great(objectp args)
 {
-	EXTRACT_ARGS;
+	objectp arg1, arg2;
+	arg1 = eval(car(args));
+	arg2 = eval(cadr(args));	
+	__ASSERTP(arg1->type + arg2->type < 10, NON NUMERIC ARGUMENT, >);
+
 	if(arg1->type == OBJ_INTEGER) {
 		if(arg2->type == OBJ_INTEGER)
 			return (arg1->value.i > arg2->value.i) ? t : nil;
@@ -88,7 +104,11 @@ F_great(objectp args)
 static objectp
 F_greateq(objectp args)
 {
-	EXTRACT_ARGS;
+	objectp arg1, arg2;
+	arg1 = eval(car(args));
+	arg2 = eval(cadr(args));	
+	__ASSERTP(arg1->type + arg2->type < 10, NON NUMERIC ARGUMENT, >=);
+
 	if(arg1->type == OBJ_INTEGER) {
 		if(arg2->type == OBJ_INTEGER)
 			return (arg1->value.i >= arg2->value.i) ? t : nil;
@@ -116,10 +136,11 @@ F_add(objectp args)
 		p = eval(car(args)); 
 		if(p->type == OBJ_INTEGER)
 			i += p->value.i;
-		if(p->type == OBJ_RATIONAL) {
+		else if(p->type == OBJ_RATIONAL) {
 			n = (n*p->value.r.d)+(d*p->value.r.n);
 			d *= p->value.r.d;
-		}
+		} else
+			__ASSERTP(p->type, NON NUMERIC ARGUMENT, ADD);
     } while ((args = cdr(args)) != nil);
 	if(n == 0L) {
 		p = new_object(OBJ_INTEGER);
@@ -152,7 +173,8 @@ F_prod(objectp args)
 		else if(p->type == OBJ_RATIONAL) {
 			d *= p->value.r.d;
 			n *= p->value.r.n;
-		}
+		} else
+			__ASSERTP(p->type, NON NUMERIC ARGUMENT, PROD);
     } while ((args = cdr(args)) != nil);
 	if(d == 1L) {
 		p = new_object(OBJ_INTEGER);
@@ -175,7 +197,7 @@ F_div(objectp args)
 	objectp d, n, rat;
 	n = eval(car(args));
 	d = eval(car(cdr(args)));
-
+	__ASSERTP(n->type + d->type < 10, NON NUMERIC ARGUMENT, DIV);
 	if(n->type == OBJ_INTEGER) {
 		g = n->value.i;
 		n = new_object(OBJ_RATIONAL);
@@ -190,8 +212,8 @@ F_div(objectp args)
 		d->value.r.n = g;
 		d->value.r.d = 1L;
 	}
-	if(d->value.r.d == 0 || n->value.r.d == 0)
-		return null;
+	__ASSERTP(d->value.r.d == 0 || n->value.r.d == 0, 
+	DENOMINATOR IS ZERO, DIV);
 	u = n->value.r.n*d->value.r.d;
 	v = n->value.r.d*d->value.r.n;
 	g = gcd(u, v);
@@ -238,7 +260,6 @@ F_cond(objectp args)
 	objectp p2;
 	do {
 		p2 = eval(car(car(args)));
-		ASSERTP(p2 == NULL || p2 == null, COND);
 		if (p2 != nil) {
 			if (cdar(args) != nil)
 				return F_progn(cdar(args));
@@ -264,20 +285,20 @@ F_ord(objectp args)
 	objectp q, p;
 	register int i;
 	p = eval(car(args));
-	i = 0;
+	i = 0L;
 	q = new_object(OBJ_INTEGER);	
 	if(p == nil) {
-		q->value.i = 0;
+		q->value.i = 0L;
 		return q;
 	} else if(CONSP(p)) {
-		q->value.i = 1;
+		q->value.i = 1L;
 		return q;
-	} else if(p->type != OBJ_CONS)
-		return null;
+	}
+	__ASSERTP(p->type != OBJ_CONS, NON CONS ARGUMENT, ORD);
 	do {
 		i++;
 	} while ((p = cdr(p)) != nil);
-	q->value.i = i;
+	q->value.i = (long int) i;
 	return q;    
 }
 
@@ -322,12 +343,10 @@ F_map(objectp args)
 	objectp p, p1, first, prev;
 	first = prev = NULL;
 	p1 = eval(cadr(args));
-	ASSERTP(p1->type != OBJ_CONS, MAP);
 	p = eval(car(args));
-	if(p->type != OBJ_IDENTIFIER)
-		return null;
-	if(eval(p)->type != OBJ_CONS)
-		return null;
+	__ASSERTP(p1->type != OBJ_CONS, NOT CONS ARGUMENT, MAP);
+	__ASSERTP(p->type != OBJ_IDENTIFIER, NOT IDENTIFER, MAP);
+	__ASSERTP(eval(p)->type != OBJ_CONS, NOT CONS ARGUMENT, MAP);
 	do {
 		p = new_object(OBJ_CONS);
 		p->vcar = new_object(OBJ_CONS);
@@ -346,7 +365,7 @@ F_map(objectp args)
 		prev = p;
 	} while ((p1 = cdr(p1)) != nil);
 	p = first;
-	ASSERTP(p == NULL, MAP);
+	//ASSERTP(p == NULL, MAP);
 	first = prev = NULL;
     do {
          p1 = new_object(OBJ_CONS);
@@ -503,7 +522,7 @@ F_eq(objectp args)
 	objectp a, b;
 	a = eval(car(args));
 	b = eval(cadr(args));
-	ASSERTP(a == NULL || b == NULL, EQ);
+	//ASSERTP(a == NULL || b == NULL, EQ);
 	if (a->type != b->type) 
 		return nil;
 	switch (a->type) {
@@ -528,12 +547,10 @@ F_member(objectp args)
 	objectp m, x, set;
 	m = eval(car(args));
 	set = eval(cadr(args));
-	if(set->type != OBJ_CONS)
-		return null;
+	ASSERTP(set->type != OBJ_CONS, MEMBERP);
 	do {
 		x = car(set);
-		if(x->type == OBJ_NULL)
-			return null;
+		ASSERTP(x->type == OBJ_NULL, MEMBERP);
 		switch (m->type) {
 		case OBJ_IDENTIFIER:
 			if (x->type == OBJ_IDENTIFIER && 
@@ -648,7 +665,7 @@ objectp
 F_bquote(objectp args)
 {
 	return car(args)->type == OBJ_IDENTIFIER ? car(args) :
-		car(bq(args));
+		car(eval_bquote(args));
 }
 
 objectp 
@@ -693,30 +710,20 @@ objectp
 F_subst(objectp args)
 {
 	objectp sym, val, body;
-	sym=eval(car(args));
-
-	if (sym->type == OBJ_CONS) {
-		objectp s;
-		s = eval(car(args));
-		body = eval(cadr(args));
-		princ_object(stdout,body);
-		if(body->type != OBJ_CONS)
-			return null;
+	val = eval(car(args));
+	if(val->type == OBJ_CONS) {
+		body = eval(car(cdr(args)));
+		ASSERTP(body->type != OBJ_CONS, SUBST);
 		do {
-			sym = caar(s);
-			val = eval(cdr(car(s)));			
-			body = sst(sym, val, body);			
-		} while ((s = cdr(s)) != nil);
+			body = sst(car(car(val)), cdr(car(val)), body);
+		} while((val = cdr(val)) != nil);
 		return body;
 	} else {
-		val = eval(car(args));
 		sym = eval(car(cdr(args)));
 		body = eval(car(cddr(args)));
-		if(body->type != OBJ_CONS)
-			return null;
-		return sst(sym, val, body);
+		ASSERTP(body->type != OBJ_CONS, SUBST);
+		return sst(val, sym, body);
 	}
-	return null;
 }
 
 objectp 
@@ -764,36 +771,36 @@ F_eval(objectp args)
 objectp 
 F_defmacro(objectp args)
 {
-	objectp p1, p4, lexpr;
-	p1 = car(args);
-	p4 = new_object(OBJ_CONS);
-	p4->vcar = new_object(OBJ_IDENTIFIER);
-	p4->vcar->value.id = strdup("BQUOTE");
-	p4->vcdr = cddr(args);
-	lexpr = new_object(OBJ_CONS);
-	lexpr->vcar = new_object(OBJ_IDENTIFIER);
-	lexpr->vcar->value.id = strdup("LAMBDA");
-	lexpr->vcdr = new_object(OBJ_CONS);
-	lexpr->vcdr->vcar = cadr(args);
-	lexpr->vcdr->vcdr = new_object(OBJ_CONS);
-	lexpr->vcdr->vcdr->vcar = p4;
-	set_object(p1, lexpr); 
-	return lexpr;
+	objectp func_name, aux, body;
+	func_name = car(args);
+	aux = new_object(OBJ_CONS);
+	aux->vcar = new_object(OBJ_IDENTIFIER);
+	aux->vcar->value.id = strdup("BQUOTE");
+	aux->vcdr = cddr(args);
+	body = new_object(OBJ_CONS);
+	body->vcar = new_object(OBJ_IDENTIFIER);
+	body->vcar->value.id = strdup("LAMBDA");
+	body->vcdr = new_object(OBJ_CONS);
+	body->vcdr->vcar = cadr(args);
+	body->vcdr->vcdr = new_object(OBJ_CONS);
+	body->vcdr->vcdr->vcar = aux;
+	set_object(func_name, body); 
+	return body;
 }
 
 objectp 
 F_defun(objectp args)
 {
-	objectp p1, lexpr;
-	p1 = car(args);
-	lexpr = new_object(OBJ_CONS);
-	lexpr->vcar = new_object(OBJ_IDENTIFIER);
-	lexpr->vcar->value.id = strdup("LAMBDA");
-	lexpr->vcdr = new_object(OBJ_CONS);
-	lexpr->vcdr->vcar = cadr(args);
-	lexpr->vcdr->vcdr = cddr(args);
-	set_object(p1, lexpr); 
-	return lexpr;
+	objectp func_name, body;
+	func_name = car(args);
+	body = new_object(OBJ_CONS);
+	body->vcar = new_object(OBJ_IDENTIFIER);
+	body->vcar->value.id = strdup("LAMBDA");
+	body->vcdr = new_object(OBJ_CONS);
+	body->vcdr->vcar = cadr(args);
+	body->vcdr->vcdr = cddr(args);
+	set_object(func_name, body); 
+	return body;
 }
 
 objectp 
@@ -842,7 +849,6 @@ F_setlazy(objectp args)
 		return nil;
 	}
 	ASSERTP(1, SET LAZY);
-	return null;
 }
 
 objectp
