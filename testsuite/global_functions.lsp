@@ -1,0 +1,3 @@
+(DEFUN HARMONIC(X) (IF (= X 1) 0 (+ (/ 1 X) (HARMONIC (+ X -1)))))
+(DEFUN SUMTO(X) (IF (= X 0) 0 (+ X (SUMTO (+ X -1)))))
+(DEFUN HARDCONS(L) (IF (= L NIL) NIL (CONS (CAR L) (CONS (CDR L) (CONS (HARDCONS (CDR L)))))))

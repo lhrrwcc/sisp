@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <err.h>
 #include <setjmp.h>
 #include "sisp.h"
 #include "extern.h"

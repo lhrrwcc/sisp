@@ -6,7 +6,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <fcntl.h>
-#include <err.h>
 #include <signal.h>
 #include "sisp.h"
 #include "extern.h"
@@ -21,10 +20,13 @@
 objectp 			nil;
 objectp 			t;
 objectp 			null;
+
 static objectp 		free_objs_list = NULL;
 static objectp 		used_objs_list = NULL;
 static object_pairp setobjs_list   = NULL;
+
 static unsigned int gc_id = 0;
+
 static int 			free_objs = 0;
 static int 			used_objs = 0;
 
@@ -89,19 +91,21 @@ init_objects(void)
 }
 
 void
+remove_object(void)
+{
+	setobjs_list = setobjs_list->next;
+}
+
+void
 set_object(objectp name, objectp value)
 {
 	object_pairp p, next;
 	HANDSIG(value, SET OBJECT);
-	if (name->type != OBJ_IDENTIFIER)
-		HANDSIG(NULL, SET OBJECT);
+
 	for (p = setobjs_list; p != NULL; p = next) {
 		next = p->next;
-		if (p->name->value.id != NULL && !strcmp(name->value.id, p->name->value.id)) {
-			if (value->type == OBJ_NULL) {
-				setobjs_list = next;
-				return;
-			}
+		if (name->type == OBJ_IDENTIFIER && p->name->value.id != NULL && 
+			!strcmp(name->value.id, p->name->value.id)) {
 			p->value = value;
 			return;
 		}
@@ -135,10 +139,12 @@ get_object(objectp name)
 {
 	object_pairp p;
 	HANDSIG(name, GETOBJECT);
+
 	for (p = setobjs_list; p != NULL; p = p->next)
 		if (p->name->value.id != NULL && 
 			!strcmp(name->value.id, p->name->value.id))
 			return p->value;
+	
 	HANDSIG(NULL, OBJECT NOT FOUND);
 	return null;
 }
@@ -148,23 +154,23 @@ dump_objects(void)
 {
 	object_pairp p;
 	objectp q;
-	printf("st: %d\tft: %d\n",used_objs, free_objs);
-
+	int i =0;
+	printf("used: %d\tfree: %d\n",used_objs, free_objs);
+/*
 	printf("objetos guardados: \n");
 	for (p = setobjs_list; p != NULL; p = p->next) {
-		if(p->value->type == OBJ_NULL) {
-			printf("(%p:%p-%p):%s is NULL\n",p,p->name,p->value, p->name->value.id);
-		} else if(p->name->type == OBJ_IDENTIFIER)
-		printf("%p:%s\n",p,p->name->value.id);
+		princ_object(stdout,p->name); printf(":\t ");
+		princ_object(stdout,p->value); printf("\n");		
 	}
+*/
+	printf("valores libres: \n");
+	if(free_objs <= 20)
+	for (q = free_objs_list; q != NULL; q = q->next) {
+		 i++;
+		 princ_object(stdout,q); printf("\t:%d\n",i);
+	}
+	printf("\nused: %d\tfree: %d\n", used_objs, free_objs);
 
-	printf("valores guardados: \n");
-	for (q = used_objs_list; q != NULL; q = q->next) {
-		if(q->type == OBJ_NULL) {
-		princ_object(stdout, q);
-		printf("\n");
-		}
-	}
 }	
 
 __inline__ static void
@@ -194,13 +200,11 @@ garbage_collect(void)
 {
 	objectp p, new_used_objs_list = t, next;
 	if(++gc_id == UINT_MAX-1)
-	    gc_id = 1;	
+	    gc_id = 1;
 	tag_whole_tree();
 	for (p = used_objs_list; p != NULL && p != t; p = next) {
 		next = p->next;
 		if (p->gc != gc_id && p != null) {
-			if (p->type == OBJ_IDENTIFIER)
-				free(p->value.id);
 			p->next = free_objs_list;
 			free_objs_list = p;
 			++free_objs;

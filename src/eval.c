@@ -40,6 +40,7 @@ eval_rat(objectp args)
 		d = -d;
 	}
 	g = gcd(n,d);
+
 	if(d/g == 1L) {
 		args = new_object(OBJ_INTEGER);
 		args->value.i = n/g;
@@ -54,103 +55,19 @@ eval_rat(objectp args)
 
 	return args;
 }
-
-static int 
-ss(objectp p, objectp body)
-{
-	objectp p1, p2;
-	
-	do {
-		p1 = car(body);
-		switch (p1->type) {
-		case OBJ_IDENTIFIER:
-			if (!strcmp(p1->value.id, p->value.id))
-				return 1;
-			p2 = try_object(p1);
-			if (p2->type == OBJ_CONS) 
-				if(ss(p,p2) == 1)
-					return 1;
-			break;
-		case OBJ_CONS:
-			if (ss(p,p1))
-				return 1;
-			break;
-		case OBJ_T:
-		case OBJ_NIL:
-		case OBJ_NULL:
-			if (p == p1)
-				return 1;
-			break;
-		case OBJ_INTEGER:
-			if (p1->value.i == p->value.i)
-				return 1;
-			p2 = try_object(p1);
-			if (p2->type == OBJ_CONS)
-			 if(ss(p,p2) == 1)
-				return 1;
-			break;
-		case OBJ_RATIONAL:
-			if ((p1->value.r.d == p->value.r.d) &&
-				(p1->value.r.n == p->value.r.n))
-				return 1;
-			p2 = try_object(p1);
-			if (p2->type == OBJ_CONS)
-			 if(ss(p,p2) == 1)
-				return 1;
-			break;
-		}
-	} while ((body = cdr(body)) != nil);
-	return 0;
-}
-
-__inline__ static objectp 
-eval_func_lazy(objectp p, objectp args)
-{
-	objectp first, prev;
-	objectp q, r, bind_list, value;
-	first = prev = NULL;
-	bind_list = cadr(p);
-	
-	do {
-		if (!(ss(car(bind_list), car(cddr(p)))))
-			value = nil;
-		else 
-			value = eval(car(args));
-		/* HACK! */
-		lazy_eval = false;
-	
-		r = new_object(OBJ_CONS);
-		r->vcar = try_eval(car(bind_list));
-		if (first == NULL)
-			first = r;
-		if (prev != NULL)
-			prev->vcdr = r;
-		prev = r;
-		set_object(car(bind_list), value);
-		args = cdr(args);
-	} while ((bind_list = cdr(bind_list)) != nil);
-	
-	q = F_progn(cddr(p));
-	bind_list = cadr(p);
-	do {
-		value = car(first);
-		set_object(car(bind_list), value);
-		first = cdr(first);
-	} while ((bind_list = cdr(bind_list)) != nil);
-	
-	/* UNHACK! */
-	lazy_eval = true;
-	
-	return q;
-}
+/* guardo los valores de las variables que se usan como argumentos
+ * si no tenian valor les pongo undefined
+ * reemplazo las variables por los argumentos 
+ * evaluo el cuerpo de la funcion y guardo el valor
+ * reemplazo las variables por los valores que tenian antes o las borro
+*/
 
 static objectp 
 eval_func(objectp p, objectp args)
 {
-	objectp a, b;
-	objectp q, M;
+	objectp head_args, b, q, M;
 	objectp bind_list;
-	q = a = b = NULL;
+	q = head_args = b = NULL;
 	bind_list = cadr(p);
 
 	do {
@@ -160,31 +77,41 @@ eval_func(objectp p, objectp args)
 		M->vcar->vcdr = new_object(OBJ_CONS);
 		M->vcar->vcdr->vcar = try_eval(car(bind_list));
 	
-		if (a == NULL) 
-			a = M;
+		if (head_args == NULL) 
+			head_args = M;
 		if (b != NULL) 
 			b->vcdr = M;
 		b = M;
 		args = cdr(args);
 	} while ((bind_list = cdr(bind_list)) != nil);
-	
+
 	bind_list = cadr(p);
-	args = a;
+	args = head_args;	
 	do {
-		set_object(car(bind_list), caar(a));
-		a = cdr(a);
+		set_object(car(bind_list), caar(head_args));
+		head_args = cdr(head_args);
 	} while ((bind_list = cdr(bind_list)) != nil);
 
 	q = null;
-	if (!setjmp(je))
-		q = F_progn(cddr(p));
+	b = cddr(p);
+	if (!setjmp(je)) {
+		do {
+			if (cdr(b) == nil)
+				break;
+			eval(car(b));
+		} while ((b = cdr(b)) != nil);
+		q = eval(car(b));
+	}
 	bind_list = cadr(p);
-	a = args;
+	head_args = args;
+
 	do {
-		set_object(car(bind_list), cadr(car(a)));
-		a = cdr(a);
+		if (cadr(car(head_args))->type == OBJ_NULL) 
+			remove_object();
+		else
+			set_object(car(bind_list), cadr(car(head_args)));
+		head_args = cdr(head_args);
 	} while ((bind_list = cdr(bind_list)) != nil);
-	
 	return q;
 }
 
@@ -216,8 +143,8 @@ eval_bquote(objectp args)
 		if (prev != NULL)
 			prev->vcdr = r;
 		prev = r;
-	} while ((args = cdr(args)) != nil);	
-	
+	} while ((args = cdr(args)) != nil);
+
 	return first;
 }
 
@@ -243,6 +170,5 @@ eval_cons(objectp p)
 		longjmp(je,1);
 	}
 	
-	return lazy_eval==true ? eval_func_lazy(func_name, cdr(p)) : 
-							 eval_func(func_name, cdr(p));
+	return eval_func(func_name, cdr(p));
 }

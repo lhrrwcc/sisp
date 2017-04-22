@@ -1,10 +1,6 @@
-#ifdef LINUX
-#include <strings.h>
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <err.h>
 #include <signal.h>
 #include <math.h>
 #include <unistd.h>
@@ -16,18 +12,12 @@
 #include "funcs.h"
 #include "eval.h"
 #include "misc.h"
-#define EXTRACT_ARGS	\
-		objectp arg1;	\
-		objectp arg2;	\
-		arg1=eval(car(args)); \
-		arg2=eval(cadr(args))	
 
 #define CONSP(p) ( 					\
 		p->type == OBJ_CONS && 		\
 		cdr(p)->type != OBJ_CONS && \
 		cdr(p) != nil )
 #define arg car(args)
-bool lazy_eval = false;
 
 #define __ASSERTP(COND,ARG,F) 				\
 	do { if(COND) { 						\
@@ -35,13 +25,20 @@ bool lazy_eval = false;
 	longjmp(je,1); } 						\
 	} while(0)
 
+#define __PROGN(EXPR)						\
+	do {									\
+		if(cdr(EXPR) == nil)				\
+			break;							\
+		eval(car(EXPR));					\
+	} while((EXPR = cdr(EXPR)) != nil);		
+
 static objectp 
 F_less(objectp args)
 {
 	objectp arg1, arg2;
 	arg1 = eval(car(args));
 	arg2 = eval(cadr(args));	
-	__ASSERTP(arg1->type + arg2->type < 10, NON NUMERIC ARGUMENT, <);
+	__ASSERTP(arg1->type+arg2->type<10, NON NUMERIC ARGUMENT, <);
 
 	if(arg1->type == OBJ_INTEGER) {
 		if(arg2->type == OBJ_INTEGER)
@@ -126,12 +123,10 @@ F_greateq(objectp args)
 static objectp
 F_add(objectp args)
 {
-    long int i;
-	long int d, n, g;
+	long int i, d, n, g;
     objectp p;
-	i = 0L;
+	i = n = 0L;
 	d = 1L;
-	n = 0L;
     do {
 		p = eval(car(args)); 
 		if(p->type == OBJ_INTEGER)
@@ -142,6 +137,7 @@ F_add(objectp args)
 		} else
 			__ASSERTP(p->type, NON NUMERIC ARGUMENT, ADD);
     } while ((args = cdr(args)) != nil);
+	
 	if(n == 0L) {
 		p = new_object(OBJ_INTEGER);
     	p->value.i = i;
@@ -151,7 +147,7 @@ F_add(objectp args)
 		if(i != 0L)
 			n += d*i;
 		g = gcd(n,d);
-    	p->value.r.n = n/g;
+		p->value.r.n = n/g;
 		p->value.r.d = d/g;
 	}
     return eval(p);
@@ -160,12 +156,10 @@ F_add(objectp args)
 static objectp
 F_prod(objectp args)
 {
-    long int i;
-	long int d, n,g;
+	long int i, d, n, g;
     objectp p;
-    i = 1L;
-	d = 1L;
-	n = 1L;
+    i = d = n = 1L;
+
     do {
 		p = eval(car(args)); 
 		if(p->type == OBJ_INTEGER)
@@ -176,6 +170,7 @@ F_prod(objectp args)
 		} else
 			__ASSERTP(p->type, NON NUMERIC ARGUMENT, PROD);
     } while ((args = cdr(args)) != nil);
+
 	if(d == 1L) {
 		p = new_object(OBJ_INTEGER);
     	p->value.i = i;
@@ -238,9 +233,7 @@ F_div(objectp args)
 objectp 
 F_atom(objectp args)
 {
-	objectp p;
-	p = eval(car(args));
-	switch (p->type) {
+	switch (eval(car(args))->type) {
 		case OBJ_T: 
 		case OBJ_NIL: 
 		case OBJ_IDENTIFIER:
@@ -257,14 +250,9 @@ F_atom(objectp args)
 objectp 
 F_cond(objectp args)
 {
-	objectp p2;
 	do {
-		p2 = eval(car(car(args)));
-		if (p2 != nil) {
-			if (cdar(args) != nil)
+		if (eval(car(car(args))) != nil) 
 				return F_progn(cdar(args));
-			return p2;
-		}
 	} while ((args = cdr(args)) != nil);
 	return nil;
 }
@@ -382,7 +370,6 @@ F_map(objectp args)
 objectp 
 F_quit(objectp args)
 {
-	kill(getppid(), SIGTERM);
 	exit(0);
 	return NULL;
 }
@@ -423,6 +410,18 @@ F_not(objectp args)
 	return eval(car(args)) != nil ? nil : t;	
 }
 
+objectp
+F_xor(objectp args)
+{
+	objectp first;
+	first = eval(car(args));
+	do {
+		if (eval(car(args)) != first)
+			return nil;
+	} while ((args = cdr(args)) != nil);
+	return t;
+}
+
 objectp 
 F_unless(objectp args)
 {
@@ -434,10 +433,8 @@ F_unless(objectp args)
 objectp
 F_while(objectp args)
 {
-	objectp p;
 	while(1) {
-		p = eval(car(args));
-		if (p == nil)
+		if (eval(car(args)) == nil)
 		    break;
 		F_progn(cdr(args));
 	}
@@ -589,12 +586,29 @@ F_member(objectp args)
 }
 
 objectp 
+F_defun(objectp args)
+{
+	objectp func_name, body;
+	func_name = car(car(args));
+	body = new_object(OBJ_CONS);
+	body->vcar = new_object(OBJ_IDENTIFIER);
+	body->vcar->value.id = strdup("LAMBDA");
+	body->vcdr = new_object(OBJ_CONS);
+	body->vcdr->vcar = cdr(car(args));
+	body->vcdr->vcdr = cdr(args);
+	set_object(func_name, body); 
+	return body;
+}
+
+objectp 
 F_setq(objectp args)
 {
 	objectp p2;
+	if(car(args)->type == OBJ_CONS) {
+		return F_defun(args);
+	}
 	do {
 		p2 = eval(cadr(args));
-		//ASSERTP(car(args)->type != OBJ_IDENTIFIER,SETQ); 
 		set_object(car(args), p2);
 	} while ((args = cddr(args)) != nil);
 	return p2;
@@ -677,6 +691,7 @@ F_comma(objectp args)
 objectp 
 F_let(objectp args)
 {
+	objectp lambda;
 	objectp var, bind, bind_list, body, r, q, first, prev;
 	first = prev = NULL;
 	bind_list = car(args);
@@ -684,18 +699,23 @@ F_let(objectp args)
 		return F_progn(cdr(args));
 	body = cdr(args);
 	do {
-		bind = caar(bind_list);
-		var = eval(cadr(car(bind_list)));
+		printf("\n\n:");
+		princ_object(stdout,car(bind_list));printf("\n\n");
+		//bind = caar(bind_list);
+		//var = eval(cadr(car(bind_list)));
 		r = new_object(OBJ_CONS);
-		r->vcar = try_eval(bind);
+		r->vcar = try_eval(caar(bind_list));
 		if (first == NULL)
 			first = r;
 		if (prev != NULL)
 			prev->vcdr = r;
-		prev = r;
-		set_object(bind,var);
+		prev = r; 
+
+		F_setq(car(bind_list));
 	} while ((bind_list = cdr(bind_list)) != nil);
-	q = F_progn(body);
+
+	__PROGN(body);
+	q = eval(car(body));
 	bind_list = car(args);
 	do {
 		bind = caar(bind_list);
@@ -789,21 +809,6 @@ F_defmacro(objectp args)
 }
 
 objectp 
-F_defun(objectp args)
-{
-	objectp func_name, body;
-	func_name = car(args);
-	body = new_object(OBJ_CONS);
-	body->vcar = new_object(OBJ_IDENTIFIER);
-	body->vcar->value.id = strdup("LAMBDA");
-	body->vcdr = new_object(OBJ_CONS);
-	body->vcdr->vcar = cadr(args);
-	body->vcdr->vcdr = cddr(args);
-	set_object(func_name, body); 
-	return body;
-}
-
-objectp 
 F_typeof(objectp args)
 {
 	objectp p = eval(car(args));
@@ -833,33 +838,7 @@ F_typeof(objectp args)
 				printf("IDENTIFIER\n");
 			break;
 	}
-	return t;
-}
-
-objectp 
-F_setlazy(objectp args)
-{
-    objectp p;
-	p = eval(car(args));
-	if(p == t) {
-		lazy_eval = true;
-		return t;
-    } else if(p == nil) {
-		lazy_eval = false;
-		return nil;
-	}
-	ASSERTP(1, SET LAZY);
-}
-
-objectp
-F_xor(objectp args)
-{
-	objectp first;
-	first = eval(car(args));
-	do {
-		if (eval(car(args)) != first)
-			return nil;
-	} while ((args = cdr(args)) != nil);
+	free(p);
 	return t;
 }
 
@@ -948,8 +927,8 @@ funcs functions[FUNCS_N] = {
 	{"COND",F_cond},
 	{"CONS",F_cons},
 	{"CONSP",F_consp},
+	{"DEFINE",F_setq},
 	{"DEFMACRO",F_defmacro},
-	{"DEFUN",F_defun},
 	{"DUMP", F_dump},
 	{"EQ",F_eq},
 	{"EVAL",F_eval},
@@ -961,7 +940,6 @@ funcs functions[FUNCS_N] = {
 	{"MAP",F_map},
 	{"MEMBERP",F_member},
 	{"NOT",F_not},
-	{"NULL", F_not},
 	{"OR",F_or},
 	{"ORD",F_ord},
 	{"PAIR" , F_pair},	
@@ -972,8 +950,6 @@ funcs functions[FUNCS_N] = {
 	{"PUSH", F_push},
 	{"QUIT",F_quit},
 	{"QUOTE",F_quote},
-	{"SETLAZY",	F_setlazy},
-	{"SETQ",F_setq},
 	{"SUBST",F_subst},
 	{"TYPEOF",F_typeof},
 	{"XOR",F_xor}

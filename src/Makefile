@@ -13,9 +13,9 @@ INSTALL_DATA = ${INSTALL} -m 644
 INSTALL = /usr/bin/install -c
 
 CC = cc
-CFLAGS = -Wall -I$(srcdir)/.. -I$(srcdir)/../lib
+CFLAGS = -Wall -I$(srcdir)/.. -I$(srcdir)/
 LDFLAGS = -lm
-LIBS = ../lib/libsisp.a  
+LIBS =   
 
 LEX = @LEX@
 YACC = @YACC@

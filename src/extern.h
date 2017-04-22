@@ -21,6 +21,7 @@ extern objectp 	search_object_rational(long int, long int);
 
 extern void 	set_object(objectp, objectp);
 extern objectp 	get_object(objectp);
+extern void     remove_object(void);
 extern objectp 	try_object(objectp);
 extern objectp 	handsig(const char *);
 extern void 	garbage_collect(void);

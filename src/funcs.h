@@ -18,7 +18,7 @@ extern objectp F_lambda(objectp);
 extern objectp F_typeof(objectp);
 extern objectp F_eval(objectp);
 extern objectp F_append(objectp);
-#define FUNCS_N 48
+#define FUNCS_N 45
 funcs functions[FUNCS_N];
 #define _FUNCS_H
 

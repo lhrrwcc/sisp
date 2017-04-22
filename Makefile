@@ -1,4 +1,4 @@
-subdirs = lib src
+subdirs = src
 
 all install uninstall clean realclean mostlyclean:
 	@for f in $(subdirs); do \

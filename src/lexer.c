@@ -6,7 +6,7 @@
 #include "sisp.h"
 #include "extern.h"
 
-#define LEX_BUF_MAX 1024
+#define LEX_BUF_MAX 4096
 #define xgetc() ((lex_bufp > lex_buf) ? *--lex_bufp : \
 				toupper(fgetc(input_file)))
 #define xungetc(c) *lex_bufp++ = c
@@ -30,7 +30,7 @@ jmp_buf 	jl;
 void
 init_lex(void)
 {
-	token_buffer_max = 64;
+	token_buffer_max = 256;
 	token_buffer = (char *) malloc(token_buffer_max);
 	lex_bufp = lex_buf;
 }
@@ -45,7 +45,7 @@ static char*
 extend_buf(char *p)
 {
 	int off = p - token_buffer;
-	token_buffer_max += 128;
+	token_buffer_max += 512;
 	token_buffer = (char *) realloc(token_buffer, token_buffer_max);
 
 	return token_buffer + off;
