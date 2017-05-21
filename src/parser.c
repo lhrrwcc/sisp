@@ -51,7 +51,7 @@ objectp parse_form(void)
 		p->value.c.car = parse_object(1);
 		prev = p;
 	};
-	return (first == NULL) ? nil : first;
+	return (first == NULL) ? null : first;
 }
 		 
 objectp 
@@ -64,7 +64,8 @@ parse_object(int havetoken)
 		if (!setjmp(jl))
 		    thistoken = gettoken();
 		else {
-			while ((havetoken = getchar()) != '\n' && havetoken != EOF);
+			while ((havetoken = getchar()) != '\n' && havetoken != EOF)
+				;
 		    longjmp(jb, 1);
 		}
 	}
@@ -104,14 +105,15 @@ parse_object(int havetoken)
 			n = strtol(token_buffer, &delim, 10);
 			delim++;
 			d = strtol(delim, NULL, 10);
-			if ((p = search_object_rational(n,d)) == NULL) {
+			if ((p = search_object_rational(n, d)) == NULL) {
 				p = new_object(OBJ_RATIONAL);
 				p->value.r.n = n;
 				p->value.r.d = d;
 			}
 			break;			
 		default:
-			while ((havetoken = getchar()) != '\n' && havetoken != EOF) ;
+			while ((havetoken = getchar()) != '\n' && havetoken != EOF) 
+				;
 			longjmp(jb, 1);
 		}
 	return p;

@@ -10,6 +10,7 @@
 #include "sisp.h"
 #include "extern.h"
 #include "misc.h"
+#include "vmm.h"
 
 #define HANDSIG(ARG,EXP)				\
 	do { if (ARG==NULL)	{				\
@@ -17,37 +18,27 @@
 		longjmp(je, 1); }				\
 	} while(0)
 
-objectp 			nil;
-objectp 			t;
-objectp 			null;
+objectp nil;
+objectp	t;
+objectp	null;
 
-static objectp 		free_objs_list = NULL;
-static objectp 		used_objs_list = NULL;
-static object_pairp setobjs_list   = NULL;
-
-static unsigned int gc_id = 0;
-
-static int 			free_objs = 0;
-static int 			used_objs = 0;
+static object_pairp setobjs_list 	= NULL;
+static unsigned int gc_id 			= 0;
 
 __inline__ objectp 
 new_object(a_type type)
 {
 	objectp p;
-	if (free_objs_list == NULL)
-		p = (objectp) malloc(sizeof(struct object));
-	else { 
-		p = free_objs_list;
-		free_objs_list = free_objs_list->next;
-		--free_objs;
-	}
-	p->next = used_objs_list;
-	used_objs_list = p;
+	
+	p = oballoc(type);
 	p->type = type;
+	p->gc = 0;
+	p->next = pool[type].head.u;
+	pool[type].head.u = p;
+	pool[type].used_size++;
 	if (type == OBJ_CONS) 
 		p->vcar = p->vcdr = nil;
-	p->gc = 0;
-	++used_objs;
+
 	return p;
 }
 
@@ -55,10 +46,11 @@ __inline__  objectp
 search_object_rational(long int num, long int den)
 {
 	objectp p;
-	for (p = used_objs_list; p != NULL; p = p->next)
-		if (p->type == OBJ_RATIONAL)
-			if(p->value.r.n == num && p->value.r.d == den)
+	
+	for (p = pool[OBJ_RATIONAL].head.u; p != NULL; p = p->next)
+		if (p->value.r.n == num && p->value.r.d == den)
 				return p; 
+
 	return (objectp) NULL;
 }
 
@@ -66,9 +58,11 @@ __inline__  objectp
 search_object_integer(long int i)
 {
 	objectp p;
-	for (p = used_objs_list; p != NULL; p = p->next)
-		if (p->type == OBJ_INTEGER && p->value.i == i)
+	
+	for (p = pool[OBJ_INTEGER].head.u; p != NULL; p = p->next)
+		if (p->value.i == i)
 			return p;
+	
 	return (objectp) NULL;
 }
 
@@ -76,32 +70,70 @@ __inline__  objectp
 search_object_identifier(char *s)
 {
 	objectp p;
-	for (p = used_objs_list; p != NULL; p = p->next)
-		if (p->type == OBJ_IDENTIFIER && !strcmp(p->value.id, s))
+	
+	for (p = pool[OBJ_IDENTIFIER].head.u; p != NULL; p = p->next)
+		if (!strcmp(p->value.id, s))
 			return p;
+	
 	return (objectp) NULL;
 }
 
 void 
 init_objects(void)
 {
+	int i, j;
+	objectp new_heap_list = NULL;
+	
+	for(i=3; i<7; i++) {
+		pool[i].head.u = NULL;
+		pool[i].head.f = NULL;
+		pool[i].free_size = 0;
+		pool[i].used_size = 0;
+	}
+	for(i=3; i<=4; i++) {
+		pool[i].head.f = malloc(OBJ_SIZE);
+		pool[i].head.f->next = NULL;
+		new_heap_list = pool[i].head.f;
+		j = (i==3 ? 63 : 511);
+		pool[i].free_size = j+1;
+		for(j=0; j<(i==3 ? 63 : 511); j++) {
+			pool[i].head.f->next = malloc(OBJ_SIZE);
+			pool[i].head.f = pool[i].head.f->next; 
+		}
+		pool[i].head.f->next = NULL;
+		pool[i].head.f = new_heap_list;
+	}
+	null	= new_object(OBJ_NULL);
 	nil 	= new_object(OBJ_NIL);
 	t		= new_object(OBJ_T);
-	null	= new_object(OBJ_NULL);
 }
 
 void
-remove_object(void)
+remove_object(objectp name)
 {
-	setobjs_list = setobjs_list->next;
-}
+	object_pairp p, prev;
+	prev = NULL;
+	
+	for(p = setobjs_list; p != NULL; prev = p, p = p->next)
+		if (name->type == OBJ_IDENTIFIER && p->name->value.id != NULL && 
+			!strcmp(name->value.id, p->name->value.id)) {
+			if (prev == NULL)
+				setobjs_list = p->next;
+			else
+				prev->next = p->next;
+			if(p->value->type == OBJ_IDENTIFIER)
+				free(p->value->value.id);
+			free(p);
+			break;
+		}
+}	
 
 void
 set_object(objectp name, objectp value)
 {
 	object_pairp p, next;
-	HANDSIG(value, SET OBJECT);
 
+	HANDSIG(value, SET OBJECT);
 	for (p = setobjs_list; p != NULL; p = next) {
 		next = p->next;
 		if (name->type == OBJ_IDENTIFIER && p->name->value.id != NULL && 
@@ -116,15 +148,12 @@ set_object(objectp name, objectp value)
 	p->name = name;
 	p->value = value;
 }
-/*
- * this is similar to get_object function except it might return null
- * It is needed in order to know if a variable used as a parameter
- * in a function definition already has a value
- */
+
 __inline__ objectp
 try_object(objectp name)
 {
 	object_pairp p;
+
 	if (name == null)
 		return null;
 	for (p = setobjs_list; p != NULL; p = p->next)
@@ -138,13 +167,13 @@ __inline__ objectp
 get_object(objectp name)
 {
 	object_pairp p;
-	HANDSIG(name, GETOBJECT);
 
+	HANDSIG(name, GETOBJECT);
 	for (p = setobjs_list; p != NULL; p = p->next)
 		if (p->name->value.id != NULL && 
 			!strcmp(name->value.id, p->name->value.id))
 			return p->value;
-	
+		
 	HANDSIG(NULL, OBJECT NOT FOUND);
 	return null;
 }
@@ -152,25 +181,16 @@ get_object(objectp name)
 void 
 dump_objects(void)
 {
-	object_pairp p;
 	objectp q;
-	int i =0;
-	printf("used: %d\tfree: %d\n",used_objs, free_objs);
-/*
-	printf("objetos guardados: \n");
-	for (p = setobjs_list; p != NULL; p = p->next) {
-		princ_object(stdout,p->name); printf(":\t ");
-		princ_object(stdout,p->value); printf("\n");		
+	int i,j;
+	
+	for(i=0;i<7;i++) {
+		printf("[%d]\t|%10zd\t%10zd|\n",i, pool[i].used_size,pool[i].free_size);
+		j = 0;
+		for (q = pool[i].head.u; q != NULL; q = q->next) {
+			j++;
+		}
 	}
-*/
-	printf("valores libres: \n");
-	if(free_objs <= 20)
-	for (q = free_objs_list; q != NULL; q = q->next) {
-		 i++;
-		 princ_object(stdout,q); printf("\t:%d\n",i);
-	}
-	printf("\nused: %d\tfree: %d\n", used_objs, free_objs);
-
 }	
 
 __inline__ static void
@@ -189,6 +209,7 @@ __inline__ static void
 tag_whole_tree(void)
 {
 	object_pairp p;
+
 	for (p = setobjs_list; p != NULL; p = p->next) {
 		tag_tree(p->name);
 		tag_tree(p->value);
@@ -198,23 +219,39 @@ tag_whole_tree(void)
 __inline__ void 
 garbage_collect(void)
 {
-	objectp p, new_used_objs_list = t, next;
-	if(++gc_id == UINT_MAX-1)
+	objectp p, prev , next;
+	objectp new_used_objs_list = t;
+	int i;
+
+	if(++gc_id == UINT_MAX-1) {
+		fprintf(stderr, "Out of integers\n");
 	    gc_id = 1;
-	tag_whole_tree();
-	for (p = used_objs_list; p != NULL && p != t; p = next) {
-		next = p->next;
-		if (p->gc != gc_id && p != null) {
-			p->next = free_objs_list;
-			free_objs_list = p;
-			++free_objs;
-			--used_objs;
-		} else {
-			p->next = new_used_objs_list;
-			new_used_objs_list = p;
-		}
 	}
-	used_objs_list = new_used_objs_list;
+
+	tag_whole_tree();
+
+	for(i = 3; i < 7; i++) {
+		prev = NULL;
+		new_used_objs_list = NULL;
+		for(p=pool[i].head.u; p != NULL; prev=p, p=next) {
+			next = p->next;	
+			if(prev == NULL);
+				pool[i].head.u = pool[i].head.u->next;
+			prev = next;
+			if (p->gc != gc_id && p != null) {
+				p->next	= pool[i].head.f;
+				pool[i].head.f = p;
+				pool[i].free_size++;
+				pool[i].used_size--;
+			} else {
+				p->next = new_used_objs_list;
+				new_used_objs_list = p;
+			}
+		}
+		pool[i].head.u = new_used_objs_list;
+		prev = NULL;	
+		recycle_pool(i);
+	}
 }
 
 /*

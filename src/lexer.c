@@ -30,7 +30,7 @@ jmp_buf 	jl;
 void
 init_lex(void)
 {
-	token_buffer_max = 256;
+	token_buffer_max = 128;
 	token_buffer = (char *) malloc(token_buffer_max);
 	lex_bufp = lex_buf;
 }
@@ -45,7 +45,7 @@ static char*
 extend_buf(char *p)
 {
 	int off = p - token_buffer;
-	token_buffer_max += 512;
+	token_buffer_max += 128;
 	token_buffer = (char *) realloc(token_buffer, token_buffer_max);
 
 	return token_buffer + off;
@@ -56,7 +56,7 @@ gettoken(void)
 {
 	char *p;
 	int c;
-	for (;;) {
+	while(1) {
 		c = xgetc();
 		switch (c) {
 		case ',':
@@ -66,7 +66,7 @@ gettoken(void)
 			else {
 				xungetc(c);
 				c = ',';
-				return c;
+				return c; //parse_comma
 			}
 		case '`':
 			c = xgetc();
@@ -88,12 +88,14 @@ gettoken(void)
 			}
 			return ')';
 		case ' ': 
-			while (isspace(c = xgetc())) ;
+			while (isspace(c = xgetc())) 
+				;
 			xungetc(c);
 		case '\f': case '\t': case '\v': case '\r': case '\n':
 			break;
 		case ';':
-			while ((c = xgetc()) != '\n');
+			while ((c = xgetc()) != '\n')
+				;
 			break;
 		case '0': case '1': case '2': case '3':	case '4': case '5': 
 		case '6': case '7': case '8': case '9': case '-':

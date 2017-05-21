@@ -17,6 +17,7 @@
 		p->type == OBJ_CONS && 		\
 		cdr(p)->type != OBJ_CONS && \
 		cdr(p) != nil )
+
 #define arg car(args)
 
 #define __ASSERTP(COND,ARG,F) 				\
@@ -35,10 +36,24 @@
 static objectp 
 F_less(objectp args)
 {
-	objectp arg1, arg2;
+	//objectp arg1, arg2;
+	args->vcar = eval(car(args));
+	args->vcdr = eval(cadr(args));
+	if(args->vcar->type == OBJ_INTEGER) {
+		if(args->vcdr->type == OBJ_INTEGER)
+			return (args->vcar->value.i < args->vcdr->value.i) ? t : nil;
+		if(args->vcdr->type == OBJ_RATIONAL)
+			return (args->vcar->value.i*args->vcdr->value.r.d < args->vcdr->value.r.n) ? t : nil;
+	} else if(args->vcar->type == OBJ_RATIONAL) {
+		if(args->vcdr->type == OBJ_INTEGER)
+			return (args->vcar->value.r.n < args->vcar->value.r.d*args->vcdr->value.i) ? t : nil;
+		if(args->vcdr->type == OBJ_RATIONAL)
+			return (args->vcar->value.r.n*args->vcdr->value.r.d < args->vcdr->value.r.n * args->vcar->value.r.d) ? t : nil;									
+	}
+	/*
 	arg1 = eval(car(args));
 	arg2 = eval(cadr(args));	
-	__ASSERTP(arg1->type+arg2->type<10, NON NUMERIC ARGUMENT, <);
+	__ASSERTP(arg1->type + arg2->type < 10, NON NUMERIC ARGUMENT, <);
 
 	if(arg1->type == OBJ_INTEGER) {
 		if(arg2->type == OBJ_INTEGER)
@@ -51,6 +66,7 @@ F_less(objectp args)
 		if(arg2->type == OBJ_RATIONAL)
 			return (arg1->value.r.n*arg2->value.r.d < arg2->value.r.n * arg1->value.r.d) ? t : nil;									
 	}
+	*/
 	return null;
 }
 
@@ -230,6 +246,18 @@ F_div(objectp args)
 	return rat; 
 }
 
+__inline__ static
+ objectp F_car(objectp args)
+{
+	return car(eval(car(args)));
+}
+
+__inline__ static
+objectp F_cdr(objectp args)
+{
+		return cdr(eval(arg));
+}
+
 objectp 
 F_atom(objectp args)
 {
@@ -242,9 +270,59 @@ F_atom(objectp args)
 			return t;
 		case OBJ_CONS:
 			return nil;
-		default: // if p->type == NULL then eval will break.
+		default:
 			return null;
 	}
+}
+
+objectp 
+F_consp(objectp args)
+{
+	//objectp p;
+	args->vcar = eval(car(args));
+	if (args->vcar->type == OBJ_CONS && cdr(args->vcar)->type != OBJ_CONS && cdr(args->vcar) != nil)
+		return t;
+	return nil;
+}
+
+objectp 
+F_typeof(objectp args)
+{
+	objectp p = eval(car(args));
+	switch (p->type) {
+		case OBJ_RATIONAL:
+			printf("RATIONAL\n");
+			break;
+		case OBJ_INTEGER:
+			printf("INTEGER\n");
+			break;
+		case OBJ_NULL:
+			printf("UNDEFINED\n");
+			break;
+	    case OBJ_NIL:
+		    printf("NIL\n");
+			break;
+		case OBJ_T:
+			printf("T\n");
+			break;
+		case OBJ_CONS:
+			printf("CONS\n");
+			break;
+		case OBJ_IDENTIFIER:
+			if(strcmp(p->value.id,"LAMBDA") == 1)
+				printf("FUNCTION\n");
+			else
+				printf("IDENTIFIER\n");
+			break;
+	}
+	return t;
+}
+
+objectp 
+F_if(objectp args)
+{
+	return eval(car(args)) != nil ? eval(cadr(args)) :
+		F_progn(cddr(args));
 }
 
 objectp 
@@ -255,16 +333,6 @@ F_cond(objectp args)
 				return F_progn(cdar(args));
 	} while ((args = cdr(args)) != nil);
 	return nil;
-}
-
-objectp
-F_cons(objectp args)
-{
-	objectp p;
-	p = new_object(OBJ_CONS);
-	p->vcar = eval(car(args));
-	p->vcdr = eval(cadr(args));
-	return p;
 }
 
 objectp
@@ -290,23 +358,14 @@ F_ord(objectp args)
 	return q;    
 }
 
-__inline__ static
- objectp F_car(objectp args)
+objectp
+F_cons(objectp args)
 {
-	return car(eval(car(args)));
-}
-
-__inline__ static
-objectp F_cdr(objectp args)
-{
-		return cdr(eval(arg));
-}
-
-objectp 
-F_if(objectp args)
-{
-	return eval(car(args)) != nil ? eval(cadr(args)) :
-		F_progn(cddr(args));
+	objectp p;
+	p = new_object(OBJ_CONS);
+	p->vcar = eval(car(args));
+	p->vcdr = eval(cadr(args));
+	return p;//args;
 }
 
 objectp 
@@ -331,29 +390,26 @@ F_map(objectp args)
 	objectp p, p1, first, prev;
 	first = prev = NULL;
 	p1 = eval(cadr(args));
-	p = eval(car(args));
+	p = car(args);
 	__ASSERTP(p1->type != OBJ_CONS, NOT CONS ARGUMENT, MAP);
 	__ASSERTP(p->type != OBJ_IDENTIFIER, NOT IDENTIFER, MAP);
-	__ASSERTP(eval(p)->type != OBJ_CONS, NOT CONS ARGUMENT, MAP);
 	do {
 		p = new_object(OBJ_CONS);
 		p->vcar = new_object(OBJ_CONS);
-		p->vcar->vcar = eval(car(args));
-		p->vcar->vcdr = new_object(OBJ_CONS);
-		p->vcar->vcdr->vcar = new_object(OBJ_CONS);
-		p->vcar->vcdr->vcar->vcar =	new_object(OBJ_IDENTIFIER);
-		p->vcar->vcdr->vcar->vcar->value.id = strdup("QUOTE");
- 		p->vcar->vcdr->vcar->vcdr = new_object(OBJ_CONS);
-		p->vcar->vcdr->vcar->vcdr->vcar = car(p1);
-		p->vcar->vcdr->vcar->vcdr->vcdr = nil;
+		p->vcar->vcar = car(args);
+		if(car(p1)->type == OBJ_CONS) {
+			p->vcar->vcdr = car(p1);
+		} else {
+			p->vcar->vcdr = new_object(OBJ_CONS);
+			p->vcar->vcdr->vcar = car(p1);
+		} 
 		if (first == NULL)
 			first = p;
 		if (prev != NULL)
 			prev->vcdr = p;
 		prev = p;
 	} while ((p1 = cdr(p1)) != nil);
-	p = first;
-	//ASSERTP(p == NULL, MAP);
+	p = first; 
 	first = prev = NULL;
     do {
          p1 = new_object(OBJ_CONS);
@@ -370,6 +426,8 @@ F_map(objectp args)
 objectp 
 F_quit(objectp args)
 {
+	free_pools();
+	dump_objects();
 	exit(0);
 	return NULL;
 }
@@ -420,25 +478,6 @@ F_xor(objectp args)
 			return nil;
 	} while ((args = cdr(args)) != nil);
 	return t;
-}
-
-objectp 
-F_unless(objectp args)
-{
-	if (eval(car(args)) == nil)
-		return F_progn(cdr(args));
-	return nil;
-}
-
-objectp
-F_while(objectp args)
-{
-	while(1) {
-		if (eval(car(args)) == nil)
-		    break;
-		F_progn(cdr(args));
-	}
-	return nil;
 }
 
 objectp
@@ -551,7 +590,7 @@ F_member(objectp args)
 		switch (m->type) {
 		case OBJ_IDENTIFIER:
 			if (x->type == OBJ_IDENTIFIER && 
-					!strcmp(m->value.id, x->value.id)) 
+				!strcmp(m->value.id, x->value.id)) 
 				return t;
 			break;
 		case OBJ_CONS:
@@ -588,15 +627,14 @@ F_member(objectp args)
 objectp 
 F_defun(objectp args)
 {
-	objectp func_name, body;
-	func_name = car(car(args));
+	objectp body;
 	body = new_object(OBJ_CONS);
 	body->vcar = new_object(OBJ_IDENTIFIER);
 	body->vcar->value.id = strdup("LAMBDA");
 	body->vcdr = new_object(OBJ_CONS);
 	body->vcdr->vcar = cdr(car(args));
 	body->vcdr->vcdr = cdr(args);
-	set_object(func_name, body); 
+	set_object(car(car(args)), body); 
 	return body;
 }
 
@@ -604,24 +642,13 @@ objectp
 F_setq(objectp args)
 {
 	objectp p2;
-	if(car(args)->type == OBJ_CONS) {
+	if(car(args)->type == OBJ_CONS)
 		return F_defun(args);
-	}
 	do {
 		p2 = eval(cadr(args));
 		set_object(car(args), p2);
 	} while ((args = cddr(args)) != nil);
 	return p2;
-}
-
-objectp 
-F_consp(objectp args)
-{
-	objectp p;
-	p = eval(car(args));
-	if (p->type == OBJ_CONS && cdr(p)->type != OBJ_CONS && cdr(p) != nil)
-		return t;
-	return nil;
 }
 
 objectp
@@ -691,18 +718,15 @@ F_comma(objectp args)
 objectp 
 F_let(objectp args)
 {
-	objectp lambda;
 	objectp var, bind, bind_list, body, r, q, first, prev;
 	first = prev = NULL;
 	bind_list = car(args);
-	if (bind_list->type != OBJ_CONS)
+	if (bind_list->type != OBJ_CONS) 
 		return F_progn(cdr(args));
 	body = cdr(args);
 	do {
-		printf("\n\n:");
-		princ_object(stdout,car(bind_list));printf("\n\n");
-		//bind = caar(bind_list);
-		//var = eval(cadr(car(bind_list)));
+		bind = caar(bind_list);
+		var = eval(cadr(car(bind_list)));
 		r = new_object(OBJ_CONS);
 		r->vcar = try_eval(caar(bind_list));
 		if (first == NULL)
@@ -710,19 +734,23 @@ F_let(objectp args)
 		if (prev != NULL)
 			prev->vcdr = r;
 		prev = r; 
-
-		F_setq(car(bind_list));
+		set_object(bind,var);
 	} while ((bind_list = cdr(bind_list)) != nil);
 
 	__PROGN(body);
 	q = eval(car(body));
+	
 	bind_list = car(args);
 	do {
 		bind = caar(bind_list);
 		var = car(first);
-		set_object(bind,var);
+		if(var->type == OBJ_NULL)
+			remove_object(bind);
+		else
+			set_object(bind,var);
 		first = cdr(first);		
 	} while ((bind_list = cdr(bind_list)) != nil);
+	
 	return q;
 }
 
@@ -755,9 +783,12 @@ F_labels(objectp args)
 	ASSERTP((bind_list->type != OBJ_CONS || bind_list == nil), LABELS);
 	body = cdr(args);
 	ASSERTP((body->type != OBJ_CONS || body == nil), LABELS);
+	
 	do {
-		bind = caar(bind_list);
-		var = cdar(bind_list);
+		bind = car(caar(bind_list));
+		var = new_object(OBJ_CONS);
+		var->vcar = cdr(caar(bind_list));
+		var->vcdr = cdar(bind_list);
 		s = new_object(OBJ_CONS);
 		s->vcar = new_object(OBJ_IDENTIFIER);
 		s->vcar->value.id = strdup("LAMBDA");
@@ -771,14 +802,21 @@ F_labels(objectp args)
 		prev = r;
 		set_object(bind,s);
 	} while ((bind_list = cdr(bind_list)) != nil);
-	q = F_progn(body);
+	
+	__PROGN(body);
+	q = eval(car(body));
+
 	bind_list = car(args);
 	do {
-		bind = caar(bind_list);
+		bind = car(caar(bind_list));
 		var = car(first);
-		set_object(bind,var);
+		if(var->type == OBJ_NULL)
+			remove_object(bind);
+		else
+			set_object(bind,var);
 		first = cdr(first);
 	} while ((bind_list = cdr(bind_list)) != nil);
+	
 	return q;
 }
 
@@ -792,54 +830,22 @@ objectp
 F_defmacro(objectp args)
 {
 	objectp func_name, aux, body;
-	func_name = car(args);
+	
+	func_name = car(car(args));
 	aux = new_object(OBJ_CONS);
 	aux->vcar = new_object(OBJ_IDENTIFIER);
 	aux->vcar->value.id = strdup("BQUOTE");
-	aux->vcdr = cddr(args);
+	aux->vcdr = cdr(args);
 	body = new_object(OBJ_CONS);
 	body->vcar = new_object(OBJ_IDENTIFIER);
 	body->vcar->value.id = strdup("LAMBDA");
 	body->vcdr = new_object(OBJ_CONS);
-	body->vcdr->vcar = cadr(args);
+	body->vcdr->vcar = cdr(car(args));
 	body->vcdr->vcdr = new_object(OBJ_CONS);
 	body->vcdr->vcdr->vcar = aux;
 	set_object(func_name, body); 
-	return body;
-}
 
-objectp 
-F_typeof(objectp args)
-{
-	objectp p = eval(car(args));
-	switch (p->type) {
-		case OBJ_RATIONAL:
-			printf("RATIONAL\n");
-			break;
-		case OBJ_INTEGER:
-			printf("INTEGER\n");
-			break;
-		case OBJ_NULL:
-			printf("UNDEFINED\n");
-			break;
-	    case OBJ_NIL:
-		    printf("NIL\n");
-			break;
-		case OBJ_T:
-			printf("T\n");
-			break;
-		case OBJ_CONS:
-			printf("CONS\n");
-			break;
-		case OBJ_IDENTIFIER:
-			if(strcmp(p->value.id,"LAMBDA") == 1)
-				printf("FUNCTION\n");
-			else
-				printf("IDENTIFIER\n");
-			break;
-	}
-	free(p);
-	return t;
+	return body;
 }
 
 objectp

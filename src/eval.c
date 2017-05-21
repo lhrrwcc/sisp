@@ -55,18 +55,11 @@ eval_rat(objectp args)
 
 	return args;
 }
-/* guardo los valores de las variables que se usan como argumentos
- * si no tenian valor les pongo undefined
- * reemplazo las variables por los argumentos 
- * evaluo el cuerpo de la funcion y guardo el valor
- * reemplazo las variables por los valores que tenian antes o las borro
-*/
 
 static objectp 
 eval_func(objectp p, objectp args)
 {
-	objectp head_args, b, q, M;
-	objectp bind_list;
+	objectp head_args, b, q, M, bind_list;
 	q = head_args = b = NULL;
 	bind_list = cadr(p);
 
@@ -102,12 +95,12 @@ eval_func(objectp p, objectp args)
 		} while ((b = cdr(b)) != nil);
 		q = eval(car(b));
 	}
+
 	bind_list = cadr(p);
 	head_args = args;
-
 	do {
 		if (cadr(car(head_args))->type == OBJ_NULL) 
-			remove_object();
+			remove_object(car(bind_list));
 		else
 			set_object(car(bind_list), cadr(car(head_args)));
 		head_args = cdr(head_args);
@@ -127,7 +120,8 @@ eval_bquote(objectp args)
 		
 		if (p1->type == OBJ_CONS)
 			r->vcar = eval_bquote(p1);
-		else if(p1->type == OBJ_IDENTIFIER && !strcmp(p1->value.id, "COMMA")) { 
+		else if(p1->type == OBJ_IDENTIFIER && 
+				!strcmp(p1->value.id, "COMMA")) { 
 			r->vcar = eval(args);
 			if (first == NULL)
 				first = r;
@@ -152,11 +146,10 @@ objectp
 eval_cons(objectp p)
 {
 	objectp func_name;
-	unsigned int n_args = 0;
 	funcs key, *item;
+	int n_args = 0;
 	
 	ASSERTP(car(p)->type != OBJ_IDENTIFIER, EVAL_CONS);
-	
 	if (!strcmp(car(p)->value.id, "LAMBDA")) 
 		return p;
 	key.name = car(p)->value.id;

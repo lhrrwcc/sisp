@@ -111,7 +111,7 @@ sst(objectp b, objectp v, objectp body)
 	do {
 		p = car(body);
 		q = new_object(OBJ_CONS);
-		if(b->type != p->type)
+		if(b->type != p->type && p->type != OBJ_CONS)
 			q->vcar = p;
 		else
 		switch(p->type) {
@@ -131,6 +131,9 @@ sst(objectp b, objectp v, objectp body)
 				break;
 			case OBJ_CONS:
 				q->vcar = (eqcons(b,p) == t) ? v : p;
+				if(q->vcar == p) {
+					q->vcar = sst(b,v,p);
+				}
 				break;
 			default:
 				q->vcar = p;
@@ -142,5 +145,6 @@ sst(objectp b, objectp v, objectp body)
 			prev->vcdr = q;
 		prev = q;
 	} while((body=cdr(body)) != nil);
+
 	return first;
 }

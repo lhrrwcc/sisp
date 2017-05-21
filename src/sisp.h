@@ -3,9 +3,10 @@
 #define INTEGER     8
 #define RATIONAL    9
 typedef enum	{false, true} bool;
-	
+#define OBJ_SIZE		sizeof(struct object)
+
 typedef enum 	{OBJ_NULL, OBJ_NIL, OBJ_T, OBJ_IDENTIFIER,
-				OBJ_CONS, OBJ_INTEGER, OBJ_RATIONAL} a_type;
+				      OBJ_CONS, OBJ_INTEGER, OBJ_RATIONAL} a_type;
 
 typedef struct 	object *objectp;
 

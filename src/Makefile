@@ -13,15 +13,16 @@ INSTALL_DATA = ${INSTALL} -m 644
 INSTALL = /usr/bin/install -c
 
 CC = cc
-CFLAGS = -Wall -I$(srcdir)/.. -I$(srcdir)/
-LDFLAGS = -lm
+CFLAGS = -Wall 
+LDFLAGS = -lpthread -lm
 LIBS =   
 
 LEX = @LEX@
 YACC = @YACC@
 
 PROG = sisp
-OBJS = main.o lexer.o parser.o funcs.o object.o misc.o eval.o
+OBJS = main.o vmm.o lexer.o libsisp.o parser.o funcs.o gc.o object.o misc.o eval.o 
+
 .c.o:
 	$(CC) -c -I$(srcdir) $(CFLAGS) $<
 
@@ -51,4 +52,4 @@ realclean: distclean
 
 mostlyclean: clean
 
-$(OBJS): sisp.h extern.h  
+$(OBJS): sisp.h libsisp.h extern.h  
