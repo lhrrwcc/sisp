@@ -29,8 +29,8 @@ eval_rat(objectp args)
 	bool sign = true;
 	n = args->value.r.n;
 	d = args->value.r.d;
+
 	ASSERTP(d==0L,RATIONAL);
-	
 	if(n<0) {
 		sign = false;
 		n = -n;
@@ -61,15 +61,14 @@ eval_func(objectp p, objectp args)
 {
 	objectp head_args, b, q, M, bind_list;
 	q = head_args = b = NULL;
-	bind_list = cadr(p);
 
+	bind_list = cadr(p);
 	do {
 		M = new_object(OBJ_CONS);
 		M->vcar = new_object(OBJ_CONS);
 		M->vcar->vcar = eval(car(args));
 		M->vcar->vcdr = new_object(OBJ_CONS);
 		M->vcar->vcdr->vcar = try_eval(car(bind_list));
-	
 		if (head_args == NULL) 
 			head_args = M;
 		if (b != NULL) 
@@ -77,7 +76,6 @@ eval_func(objectp p, objectp args)
 		b = M;
 		args = cdr(args);
 	} while ((bind_list = cdr(bind_list)) != nil);
-
 	bind_list = cadr(p);
 	args = head_args;	
 	do {
@@ -95,7 +93,6 @@ eval_func(objectp p, objectp args)
 		} while ((b = cdr(b)) != nil);
 		q = eval(car(b));
 	}
-
 	bind_list = cadr(p);
 	head_args = args;
 	do {
@@ -105,6 +102,7 @@ eval_func(objectp p, objectp args)
 			set_object(car(bind_list), cadr(car(head_args)));
 		head_args = cdr(head_args);
 	} while ((bind_list = cdr(bind_list)) != nil);
+
 	return q;
 }
 
@@ -116,8 +114,7 @@ eval_bquote(objectp args)
 	
 	do { 
 		p1 = car(args);
-		r = new_object(OBJ_CONS);
-		
+		r = new_object(OBJ_CONS);	
 		if (p1->type == OBJ_CONS)
 			r->vcar = eval_bquote(p1);
 		else if(p1->type == OBJ_IDENTIFIER && 
@@ -131,7 +128,6 @@ eval_bquote(objectp args)
 			return car(first);
 		} else 
 			r->vcar = p1;
-
 		if (first == NULL)
 			first = r;
 		if (prev != NULL)

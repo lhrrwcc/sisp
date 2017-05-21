@@ -25,11 +25,7 @@ process_file(void)
 			q = GET(p);
 		} else
 			break;
-		//if(get_free_objs() <= 128) {
-			//printf("Running gc (%d)\n", get_free_objs());
-			garbage_collect();
-			//printf("Now i Have (%d)\n", get_free_objs());
-		//}
+		garbage_collect();
 	}
 	free(token_buffer);
 }
@@ -42,7 +38,6 @@ process_stdin(void)
 	init_lex();
 	while (1) {
 		printf(": ");
-		//fflush(stdout);
 		p = TRY;
 		if (p != NULL)
 			q = GET(p);
@@ -51,14 +46,7 @@ process_stdin(void)
 		if (p != NULL && q != NULL)
 			    princ_object(stdout,q);
 		puts("");
-	//	if(get_free_objs() <= 16) {
-			//printf("Running gc (%d)\n", get_free_objs());
-			garbage_collect();
-			//do_balance();
-				//printf("collected: %d\n", collected);
-
-			//printf("Now i Have (%d)\n", get_free_objs());
-	//	}
+		garbage_collect();
 	}
 	free(token_buffer);
 }
@@ -82,9 +70,8 @@ main(int argc, char **argv)
 {
 	int fd;
 	char buildf[] = "/tmp/sisp.XXXXXXXX";
-	init_objects();
-//	rc = pthread_create(&res_mngr, NULL, resource_manager, (void *)0);
 
+	init_objects();
  	if ((fd = mkstemp(buildf)) > 0) {
 		if (write_m(fd) != 0) {
 			unlink(buildf);
@@ -94,11 +81,10 @@ main(int argc, char **argv)
 		unlink(buildf);
 	} else
 		fprintf(stderr, "cannot load functions\n");
-	
 	if(argc > 1)
 		while(*++argv)  
 			process_input(*argv);
-	
 	process_input(NULL);
+
 	return 0;
 } 

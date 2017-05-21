@@ -5,6 +5,7 @@
 #include "extern.h"
 #include "vmm.h"
 #define abs(x) (x<0) ? -x : x
+
 void
 free_pools(void)
 {

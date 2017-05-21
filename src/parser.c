@@ -50,7 +50,8 @@ objectp parse_form(void)
 			prev->value.c.cdr = p;
 		p->value.c.car = parse_object(1);
 		prev = p;
-	};
+	}
+
 	return (first == NULL) ? null : first;
 }
 		 
@@ -60,6 +61,7 @@ parse_object(int havetoken)
 	objectp p = NULL;
 	long int d, n;
 	char *delim;
+	
 	if (!havetoken) {
 		if (!setjmp(jl))
 		    thistoken = gettoken();
@@ -116,5 +118,6 @@ parse_object(int havetoken)
 				;
 			longjmp(jb, 1);
 		}
+	
 	return p;
 }
