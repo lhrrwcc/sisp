@@ -22,8 +22,9 @@ free_pools(void)
 			if(p->type == OBJ_IDENTIFIER)
 				free(p->value.id);
 			free(p);
-			pool[i].used_size--;
 		}
+			pool[i].used_size = 0;
+
 		prev = NULL;
 		for(p = pool[i].head.f; p != NULL; prev = p, p = next) {
 			next = p->next;
@@ -33,8 +34,8 @@ free_pools(void)
 			if(p->type == OBJ_IDENTIFIER)
 				free(p->value.id);
 			free(p);
-			pool[i].free_size--;
 		}
+			pool[i].free_size = 0;
 	}
 }
 
@@ -44,15 +45,15 @@ recycle_pool(a_type type)
     ssize_t chunk_size;
     objectp p, next ,prev;
 
-    if(type == OBJ_IDENTIFIER)
-        chunk_size = 16;
-    else if(type == OBJ_CONS)
+    if (type == OBJ_IDENTIFIER)
         chunk_size = 32;
-    else if(type == OBJ_INTEGER || type == OBJ_RATIONAL)
-        chunk_size = 8;
+    else if (type == OBJ_CONS)
+        chunk_size = 256;
+    else if (type == OBJ_INTEGER || type == OBJ_RATIONAL)
+        chunk_size = 16;
     else
         chunk_size = 64;
-
+	
     for(p=pool[type].head.f; 
         p != NULL && pool[type].free_size > chunk_size; 
         prev = p, p=next) {
@@ -74,15 +75,15 @@ feed_pool(a_type type)
     ssize_t units;
     objectp new_heap_list;
 
-    if(type == 3)
+    if(type == OBJ_IDENTIFIER)
         units = 15;
-    else if(type == 4)
-        units = 63;
-    else if(type == 5 || type == 6)
+    else if(type == OBJ_CONS)
+        units = 127;
+    else if(type == OBJ_INTEGER || type == OBJ_RATIONAL)
         units = 7;
-    else
-        return ;
-
+    else 
+		units = 31;
+		
 	pool[type].free_size = units+1;
     pool[type].head.f = malloc(OBJ_SIZE);
 	pool[type].head.f->next = NULL;

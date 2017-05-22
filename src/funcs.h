@@ -13,7 +13,7 @@ extern objectp F_consp(objectp);
 extern objectp F_lambda(objectp); 
 extern objectp F_typeof(objectp);
 extern objectp F_eval(objectp);
-#define FUNCS_N 45
+#define FUNCS_N 46
 funcs functions[FUNCS_N];
 #define _FUNCS_H
 

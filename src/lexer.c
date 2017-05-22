@@ -7,15 +7,15 @@
 #include "extern.h"
 
 #define LEX_BUF_MAX 4096
-#define xgetc() ((lex_bufp > lex_buf) ? *--lex_bufp : \
+#define XGETC() ((lex_bufp > lex_buf) ? *--lex_bufp : \
 				toupper(fgetc(input_file)))
-#define xungetc(c) *lex_bufp++ = c
-#define CLEAN_BUFFER 	\
-	do {				\
-		xungetc(c);		\
-		while(((c = xgetc()) == '\n') && c != EOF)	\
-		;				\
-		longjmp(jl,1);	\
+#define XUNGETC(c) *lex_bufp++ = c
+#define CLEAN_BUFFER 								\
+	do {											\
+		XUNGETC(c);									\
+		while(((c = XGETC()) == '\n') && c != EOF)	\
+		;											\
+		longjmp(jl,1);								\
 	} while (0)
 
 FILE 		*input_file;
@@ -23,8 +23,7 @@ static int 	lex_buf[LEX_BUF_MAX];
 static int 	*lex_bufp;
 char 		*token_buffer;
 static int	token_buffer_max;
-static int 	lpar = 0;
-static int 	rpar = 0;
+static int	par = 0;
 jmp_buf 	jl;
 
 void
@@ -45,7 +44,7 @@ static char*
 extend_buf(char *p)
 {
 	int off = p - token_buffer;
-	
+
 	token_buffer_max += 128;
 	token_buffer = (char *) realloc(token_buffer, token_buffer_max);
 
@@ -58,44 +57,44 @@ gettoken(void)
 	char *p;
 	int c;
 	while(1) {
-		c = xgetc();
+		c = XGETC();
 		switch (c) {
 		case ',':
-			c = xgetc();
+			c = XGETC();
 			if (c == ')')
 				CLEAN_BUFFER;
 			else {
-				xungetc(c);
+				XUNGETC(c);
 				c = ',';
 				return c;
 			}
 		case '`':
-			c = xgetc();
+			c = XGETC();
 			if (c == ')')
 				CLEAN_BUFFER;
 			else {
-				xungetc(c);
+				XUNGETC(c);
 				c = '`';
 				return c;
 			}
 		case '(':
-			lpar++;
+			par++;
 			return c;
 		case ')':
-			rpar++;
-			if (rpar > lpar) {
-				rpar = lpar = 0;
+			par--;
+			if(par<0) {
+				par = 0;
 				CLEAN_BUFFER;
 			}
 			return ')';
 		case ' ': 
-			while (isspace(c = xgetc())) 
+			while (isspace(c = XGETC())) 
 				;
-			xungetc(c);
+			XUNGETC(c);
 		case '\f': case '\t': case '\v': case '\r': case '\n':
 			break;
 		case ';':
-			while ((c = xgetc()) != '\n')
+			while ((c = XGETC()) != '\n')
 				;
 			break;
 		case '0': case '1': case '2': case '3':	case '4': case '5': 
@@ -105,10 +104,10 @@ gettoken(void)
 				if (p - token_buffer >= token_buffer_max)
 					p = extend_buf(p);
 				*p++ = c;
-				c = xgetc();
+				c = XGETC();
 			} while (isdigit(c));
 			if (c == ' ' || c == ')' || c == '(' || c == '\n' || c == EOF) {
-				xungetc(c);
+				XUNGETC(c);
 				*p = '\0';
 				return INTEGER;
 			} else if(c == '/') {
@@ -116,10 +115,10 @@ gettoken(void)
 					if (p - token_buffer >= token_buffer_max)
 						p = extend_buf(p);
 						*p++ = c;
-						c = xgetc();
+						c = XGETC();
 				} while (isdigit(c));
 				if (c == ' ' || c == ')' || c == '(' || c == '\n' || c == EOF) {
-					xungetc(c);
+					XUNGETC(c);
 					*p = '\0';				
 					return RATIONAL;				
 				}
@@ -136,9 +135,9 @@ gettoken(void)
 				if (p - token_buffer >= token_buffer_max)
 					p = extend_buf(p);
 				*p++ = c;
-				c = xgetc();
+				c = XGETC();
 			} while (isalnum(c) || strchr("*+/<=>-_#", c) != NULL);
-			xungetc(c);
+			XUNGETC(c);
 			*p = '\0';
 			return IDENTIFIER;
 		default:

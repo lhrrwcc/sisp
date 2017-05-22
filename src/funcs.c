@@ -284,38 +284,48 @@ F_consp(objectp args)
 		return t;
 	return nil;
 }
+objectp 
+F_loadfile(objectp args)
+{
+	objectp p;
+	char *filename;
+	p = eval(car(args));
+	if(p->type != OBJ_IDENTIFIER)
+		return null;
+	filename = strdup(p->value.id);
+	
+	return nil;
 
+}
 objectp 
 F_typeof(objectp args)
 {
-	objectp p = eval(car(args));
-	switch (p->type) {
+	objectp p;
+	p = new_object(OBJ_IDENTIFIER);
+	switch (eval(car(args))->type) {
 		case OBJ_RATIONAL:
-			printf("RATIONAL\n");
+			p->value.id = strdup("RATIONAL");
 			break;
 		case OBJ_INTEGER:
-			printf("INTEGER\n");
+			p->value.id = strdup("INTEGER");
 			break;
 		case OBJ_NULL:
-			printf("UNDEFINED\n");
+			p->value.id = strdup("UNDEFINED");
 			break;
 	    case OBJ_NIL:
-		    printf("NIL\n");
+			p->value.id = strdup("NIL");
 			break;
 		case OBJ_T:
-			printf("T\n");
+			p->value.id = strdup("T");
 			break;
 		case OBJ_CONS:
-			printf("CONS\n");
+			p->value.id = strdup("CONS");
 			break;
 		case OBJ_IDENTIFIER:
-			if(strcmp(p->value.id,"LAMBDA") == 1)
-				printf("FUNCTION\n");
-			else
-				printf("IDENTIFIER\n");
+			p->value.id = strdup("IDENTIFIER");
 			break;
 	}
-	return t;
+	return p;
 }
 
 objectp 
@@ -943,6 +953,7 @@ funcs functions[FUNCS_N] = {
 	{"LABELS",F_labels},
 	{"LET",F_let},
 	{"LIST",F_list},
+	{"LOAD",F_loadfile},
 	{"MAP",F_map},
 	{"MEMBERP",F_member},
 	{"NOT",F_not},

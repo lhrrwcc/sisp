@@ -82,7 +82,6 @@ eval_func(objectp p, objectp args)
 		set_object(car(bind_list), caar(head_args));
 		head_args = cdr(head_args);
 	} while ((bind_list = cdr(bind_list)) != nil);
-
 	q = null;
 	b = cddr(p);
 	if (!setjmp(je)) {

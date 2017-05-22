@@ -83,12 +83,10 @@ init_objects(void)
 {
 	int i, j;
 	objectp new_heap_list = NULL;
-	
+
 	for(i=3; i<7; i++) {
-		pool[i].head.u = NULL;
-		pool[i].head.f = NULL;
-		pool[i].free_size = 0;
-		pool[i].used_size = 0;
+		pool[i].head.u = pool[i].head.f = NULL;
+		pool[i].free_size = pool[i].used_size = 0;
 	}
 	for(i=3; i<=4; i++) {
 		pool[i].head.f = malloc(OBJ_SIZE);
@@ -96,7 +94,7 @@ init_objects(void)
 		new_heap_list = pool[i].head.f;
 		j = (i==3 ? 63 : 511);
 		pool[i].free_size = j+1;
-		for(j=0; j<(i==3 ? 63 : 511); j++) {
+		while(j--) {
 			pool[i].head.f->next = malloc(OBJ_SIZE);
 			pool[i].head.f = pool[i].head.f->next; 
 		}
@@ -182,15 +180,12 @@ void
 dump_objects(void)
 {
 	objectp q;
-	int i,j;
-	
-	for(i=0;i<7;i++) {
-		printf("[%d]\t|%10zd\t%10zd|\n",i, pool[i].used_size,pool[i].free_size);
-		j = 0;
-		for (q = pool[i].head.u; q != NULL; q = q->next) {
-			j++;
-		}
-	}
+	int i, j;
+	printf(" _________________\n");
+	for(i=0;i<7;i++)
+		printf("|%8zd %8zd|\n", pool[i].used_size,pool[i].free_size);
+	printf("-------------------\n");
+
 }	
 
 __inline__ static void
@@ -223,14 +218,12 @@ garbage_collect(void)
 	objectp new_used_objs_list = t;
 	int i;
 
-	if(++gc_id == UINT_MAX-1) {
-		fprintf(stderr, "Out of integers\n");
+	if(++gc_id == UINT_MAX-1)
 	    gc_id = 1;
-	}
 
 	tag_whole_tree();
 
-	for(i = 3; i < 7; i++) {
+	for(i=3;i<7;i++) {
 		prev = NULL;
 		new_used_objs_list = NULL;
 		for(p=pool[i].head.u; p != NULL; prev=p, p=next) {
@@ -254,9 +247,7 @@ garbage_collect(void)
 	}
 }
 
-/*
- * GARBAGE COLLECTOR WITH THREADS
-
+/* GARBAGE COLLECTOR WITH THREADS 
 static
 void *tt(void *tree)
 {
@@ -269,7 +260,6 @@ void *tt(void *tree)
 		tt(&((*t_ptr)->vcdr));
 	}
 }
-
 __inline__ static
 void *tag_tree(void *tree)
 {
@@ -297,5 +287,4 @@ tag_whole_tree(void)
 		pthread_join(tag_value, NULL);
 	}
 
-}
-*/
+} */
